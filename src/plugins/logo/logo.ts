@@ -65,7 +65,10 @@ function extractJsonLdLogo(item: Record<string, unknown>): string | undefined {
   // Direct logo field
   if (item.logo) {
     if (typeof item.logo === 'string') return item.logo;
-    if (typeof item.logo === 'object' && (item.logo as Record<string, unknown>).url) {
+    if (
+      typeof item.logo === 'object' &&
+      (item.logo as Record<string, unknown>).url
+    ) {
       return String((item.logo as Record<string, unknown>).url);
     }
   }
@@ -75,7 +78,10 @@ function extractJsonLdLogo(item: Record<string, unknown>): string | undefined {
     const pub = item.publisher as Record<string, unknown>;
     if (pub.logo) {
       if (typeof pub.logo === 'string') return pub.logo;
-      if (typeof pub.logo === 'object' && (pub.logo as Record<string, unknown>).url) {
+      if (
+        typeof pub.logo === 'object' &&
+        (pub.logo as Record<string, unknown>).url
+      ) {
         return String((pub.logo as Record<string, unknown>).url);
       }
     }

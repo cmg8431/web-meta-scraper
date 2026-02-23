@@ -86,10 +86,13 @@ describe('logo plugin', () => {
   });
 
   it('prefers meta[itemprop="logo"] over img[itemprop="logo"]', () => {
-    const result = run(`<html>
+    const result = run(
+      `<html>
       <head><meta itemprop="logo" content="/meta-logo.png"></head>
       <body><img itemprop="logo" src="/img-logo.png"></body>
-    </html>`, 'https://example.com');
+    </html>`,
+      'https://example.com',
+    );
     expect(result.data.logo).toBe('https://example.com/meta-logo.png');
   });
 

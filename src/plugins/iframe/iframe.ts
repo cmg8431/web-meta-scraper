@@ -32,8 +32,7 @@ export const iframe: Plugin = (ctx): PluginResult => {
     const height =
       getAttr($('meta[name="twitter:player:height"]'), 'content') || '360';
 
-    data.iframe =
-      `<iframe src="${escapeHtml(playerUrl)}" width="${escapeHtml(width)}" height="${escapeHtml(height)}" frameborder="0" allowfullscreen></iframe>`;
+    data.iframe = `<iframe src="${escapeHtml(playerUrl)}" width="${escapeHtml(width)}" height="${escapeHtml(height)}" frameborder="0" allowfullscreen></iframe>`;
   }
 
   return { name: 'iframe', data };

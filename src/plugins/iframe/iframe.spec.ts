@@ -102,7 +102,9 @@ describe('iframe plugin', () => {
       <meta name="twitter:player:width" content="560">
       <meta name="twitter:player:height" content="315">
     </head></html>`);
-    expect(result.data.iframe).toContain('src="https://example.com/embed?v=abc123&amp;autoplay=1"');
+    expect(result.data.iframe).toContain(
+      'src="https://example.com/embed?v=abc123&amp;autoplay=1"',
+    );
     expect(result.data.iframe).toContain('width="560"');
     expect(result.data.iframe).toContain('height="315"');
   });
