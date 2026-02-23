@@ -1,44 +1,31 @@
 import type { CheerioAPI } from 'cheerio';
+import type { Plugin, PluginResult } from '../../types/plugin';
+import { getAttr, getText } from '../../utils/dom';
 
-import type { BaseMetadata, Metadata, Plugin } from '@/types';
-import { toSecureUrl } from '@/utils';
-import { getAttr, getCheerioDoc, getText } from '@/utils/dom';
+function extractBaseMeta($: CheerioAPI): Record<string, unknown> {
+  const title = getText($('title'));
+  const description = getAttr($('meta[name="description"]'), 'content') || '';
+  const author = getAttr($('meta[name="author"]'), 'content') || '';
 
-/**
- * Extracts and processes HTML metadata from various meta tags.
- *
- * @param $ - Cheerio instance for HTML parsing
- * @param secureImages - Whether to convert image URLs to HTTPS
- * @returns {BaseMetadata} - Object containing processed metadata
- * @example
- *
- * const $ = getCheerioDoc(html);
- * const metadata = extractBaseMeta($, true);
- * // {
- * //   title: "Page Title",
- * //   description: "Page Description",
- * //   keywords: ["tag1", "tag2"]
- * // }
- */
-function extractBaseMeta($: CheerioAPI, secureImages: boolean): BaseMetadata {
-  const base: BaseMetadata = {
-    title: getText($('title')),
-    description: getAttr($('meta[name="description"]'), 'content') || '',
-    author: getAttr($('meta[name="author"]'), 'content') || '',
-    keywords: [],
-  };
-
+  let keywords: string[] = [];
   const keywordsContent = getAttr($('meta[name="keywords"]'), 'content');
   if (keywordsContent) {
-    base.keywords = keywordsContent
+    keywords = keywordsContent
       .split(',')
-      .map((keyword) => keyword.trim())
+      .map((k) => k.trim())
       .filter(Boolean);
   }
 
+  const result: Record<string, unknown> = {
+    title,
+    description,
+    author,
+    keywords,
+  };
+
   const canonicalUrl = getAttr($('link[rel="canonical"]'), 'href');
   if (canonicalUrl) {
-    base.canonicalUrl = canonicalUrl;
+    result.canonicalUrl = canonicalUrl;
   }
 
   const favicon = getAttr(
@@ -46,34 +33,16 @@ function extractBaseMeta($: CheerioAPI, secureImages: boolean): BaseMetadata {
     'href',
   );
   if (favicon) {
-    base.favicon = secureImages ? toSecureUrl(favicon) : favicon;
+    result.favicon = favicon;
   }
 
-  return base;
+  return result;
 }
 
-/**
- * Meta tags extraction plugin for the metadata scraper.
- *
- * This plugin extracts standard HTML meta tags including:
- * - Title from <title> tag
- * - Description from meta description
- * - Keywords from meta keywords
- * - Canonical URL from link[rel="canonical"]
- * - Author information
- * - Favicon URL (with optional HTTPS conversion)
- *
- * @param html - Raw HTML content to parse
- * @param options - Scraper configuration options
- * @returns Promise resolving to partial metadata object
- */
-export const metaTags: Plugin = async (
-  html: string,
-  options,
-): Promise<Partial<Metadata>> => {
-  const $ = getCheerioDoc(html);
-
+export const metaTags: Plugin = (ctx): PluginResult => {
+  const { $ } = ctx;
   return {
-    base: extractBaseMeta($, options.secureImages ?? false),
+    name: 'meta-tags',
+    data: extractBaseMeta($),
   };
 };
