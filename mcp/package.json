@@ -1,6 +1,6 @@
 {
   "name": "web-meta-scraper-mcp",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "MCP server for web-meta-scraper — extract metadata from URLs and HTML via Claude Code",
   "license": "MIT",
   "author": "cmg8431 <cmg8431@gmail.com>",
