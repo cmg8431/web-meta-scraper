@@ -3,34 +3,63 @@
 # web-meta-scraper
 
 [![npm version](https://img.shields.io/npm/v/web-meta-scraper)](https://www.npmjs.com/package/web-meta-scraper)
+[![npm downloads](https://img.shields.io/npm/dm/web-meta-scraper)](https://www.npmjs.com/package/web-meta-scraper)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/web-meta-scraper)](https://bundlephobia.com/package/web-meta-scraper)
 [![license](https://img.shields.io/npm/l/web-meta-scraper)](https://github.com/cmg8431/web-meta-scraper/blob/main/LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
+[![GitHub stars](https://img.shields.io/github/stars/cmg8431/web-meta-scraper)](https://github.com/cmg8431/web-meta-scraper)
 
 English | [한국어](https://github.com/cmg8431/web-meta-scraper/blob/main/README-ko_kr.md)
 
-A lightweight, plugin-based TypeScript library for extracting web page metadata. Supports Open Graph, Twitter Cards, JSON-LD, and standard meta tags with smart priority-based merging.
+A lightweight, plugin-based TypeScript library for extracting web page metadata. Supports Open Graph, Twitter Cards, JSON-LD, oEmbed, and standard meta tags with smart priority-based merging.
+
+## Why web-meta-scraper?
+
+| | web-meta-scraper | [metascraper](https://github.com/microlinkhq/metascraper) | [open-graph-scraper](https://github.com/jshemas/openGraphScraper) |
+|---|---|---|---|
+| **Dependencies** | 1 (`cheerio`) | 10+ | 4+ |
+| **Bundle size** | ~5KB min+gzip | ~50KB+ | ~15KB+ |
+| **Plugin system** | Composable plugins | Rule-based | Monolithic |
+| **Custom plugins** | Simple function | Complex rules | Not supported |
+| **TypeScript** | First-class | Partial | Partial |
+| **oEmbed support** | Built-in plugin | Separate package | Not supported |
+| **Custom resolve rules** | Configurable priority | Fixed | Fixed |
+| **Native fetch** | Uses native `fetch()` | Uses `got` | Uses `undici` |
+
+- **Single dependency** — Only [cheerio](https://cheerio.js.org/) for HTML parsing. Uses native `fetch()` for HTTP requests.
+- **Plugin architecture** — Pick only the extractors you need. Create custom plugins with a simple function.
+- **Priority-based merging** — Automatically resolves conflicts when the same field exists in multiple sources. Fully customizable resolve rules.
+- **TypeScript first** — Full type definitions with `ResolvedMetadata`, `ScraperResult`, and plugin types.
+- **Structured result** — Returns both merged `metadata` and raw `sources` from each plugin for full transparency.
 
 ## Installation
 
 ```bash
 npm install web-meta-scraper
 # or
-yarn add web-meta-scraper
-# or
 pnpm add web-meta-scraper
+# or
+yarn add web-meta-scraper
 # or
 bun add web-meta-scraper
 ```
 
 ## Quick Start
 
+### Simple — `scrape()` function
+
+The easiest way to get started. Auto-detects URL vs HTML and uses all built-in plugins:
+
 ```typescript
-import { createScraper, metaTags, openGraph, twitter, jsonLd } from 'web-meta-scraper';
+import { scrape } from 'web-meta-scraper';
 
-const scrape = createScraper([metaTags, openGraph, twitter, jsonLd]);
-const metadata = await scrape('https://example.com');
+// From URL
+const result = await scrape('https://example.com');
 
-// Returns a flat object:
+// From HTML string
+const result = await scrape('<html><head><title>Hello</title></head></html>');
+
+console.log(result.metadata);
 // {
 //   title: "Example",
 //   description: "An example page",
@@ -40,17 +69,39 @@ const metadata = await scrape('https://example.com');
 //   siteName: "Example",
 //   ...
 // }
+
+// Raw plugin outputs are also available
+console.log(result.sources);
+// { "open-graph": { title: "Example", ... }, "meta-tags": { ... }, ... }
 ```
 
-You can also pass raw HTML instead of a URL:
+### Advanced — `createScraper()`
+
+For full control over plugins, resolve rules, fetch options, and post-processing:
 
 ```typescript
-const metadata = await scrape('<html><head><title>Hello</title></head></html>');
+import { createScraper, metaTags, openGraph, twitter, jsonLd, oembed } from 'web-meta-scraper';
+
+const scraper = createScraper({
+  plugins: [metaTags, openGraph, twitter, jsonLd, oembed],
+  fetch: {
+    timeout: 10000,
+    userAgent: 'MyBot/1.0',
+  },
+  postProcess: {
+    maxDescriptionLength: 150,
+    secureImages: true,
+  },
+});
+
+// Scrape from URL
+const result = await scraper.scrapeUrl('https://example.com');
+
+// Or parse raw HTML
+const result = await scraper.scrape(html, { url: 'https://example.com' });
 ```
 
 ## Plugins
-
-Pick only the plugins you need. Each plugin extracts metadata from a specific source.
 
 | Plugin | Import | Extracts |
 |--------|--------|----------|
@@ -58,40 +109,76 @@ Pick only the plugins you need. Each plugin extracts metadata from a specific so
 | **Open Graph** | `openGraph` | `og:title`, `og:description`, `og:image`, `og:url`, `og:type`, `og:site_name`, `og:locale` |
 | **Twitter Cards** | `twitter` | `twitter:title`, `twitter:description`, `twitter:image`, `twitter:card`, `twitter:site`, `twitter:creator` |
 | **JSON-LD** | `jsonLd` | Structured data (`Article`, `Product`, `Organization`, `FAQPage`, `BreadcrumbList`, etc.) |
+| **oEmbed** | `oembed` | oEmbed data (`title`, `author_name`, `thumbnail_url`, `html`, etc.) |
 
 ```typescript
 // Use only what you need
-const scrape = createScraper([openGraph, twitter]);
+const scraper = createScraper({
+  plugins: [openGraph, twitter],
+});
 ```
 
 ## Priority-Based Merging
 
-When the same field (e.g. `title`) exists in multiple sources, the highest-priority value wins:
+When the same field exists in multiple sources, the highest-priority value wins:
 
 | Field | Priority (high → low) |
 |-------|----------------------|
 | `title` | Open Graph → Meta Tags → Twitter |
 | `description` | Open Graph → Meta Tags → Twitter |
 | `image` | Open Graph → Twitter |
-| `url` | Open Graph → Meta Tags |
+| `url` | Open Graph → Meta Tags (canonical) |
 
-Source-specific fields like `twitterCard`, `siteName`, and `structuredData` are always included as-is.
+Source-specific fields (`twitterCard`, `siteName`, `locale`, `jsonLd`, `oembed`, etc.) are always included directly.
 
-## Options
+You can override the default rules:
 
 ```typescript
-const scrape = createScraper([metaTags, openGraph]);
+import { createScraper, metaTags, openGraph, twitter } from 'web-meta-scraper';
 
-const metadata = await scrape('https://example.com', {
-  maxDescriptionLength: 200,  // Truncate description (default: 200)
-  secureImages: true,         // Convert image URLs to HTTPS (default: true)
-  timeout: 30000,             // Request timeout in ms (default: 30000)
-  userAgent: 'MyBot/1.0',    // Custom User-Agent header
-  followRedirects: true,      // Follow HTTP redirects (default: true)
-  validateUrls: true,         // Validate URL format (default: true)
-  extractRaw: false,          // Include raw metadata (default: false)
-  omitEmpty: true,            // Remove empty/null values (default: true)
-  fallbacks: true,            // Apply fallback logic (default: true)
+const scraper = createScraper({
+  plugins: [metaTags, openGraph, twitter],
+  rules: [
+    {
+      field: 'title',
+      sources: [
+        { plugin: 'twitter', key: 'title', priority: 3 },   // Twitter first
+        { plugin: 'open-graph', key: 'title', priority: 2 },
+        { plugin: 'meta-tags', key: 'title', priority: 1 },
+      ],
+    },
+    // ... other rules
+  ],
+});
+```
+
+## Configuration
+
+### `ScraperConfig`
+
+```typescript
+const scraper = createScraper({
+  // Plugins to use
+  plugins: [metaTags, openGraph, twitter, jsonLd, oembed],
+
+  // Resolve rules (default: DEFAULT_RULES)
+  rules: DEFAULT_RULES,
+
+  // Fetch options (for scrapeUrl)
+  fetch: {
+    timeout: 30000,             // Request timeout in ms (default: 30000)
+    userAgent: 'MyBot/1.0',    // Custom User-Agent header
+    followRedirects: true,      // Follow HTTP redirects (default: true)
+    maxContentLength: 5242880,  // Max response size in bytes (default: 5MB)
+  },
+
+  // Post-processing options
+  postProcess: {
+    maxDescriptionLength: 200,  // Truncate description (default: 200)
+    secureImages: true,         // Convert image URLs to HTTPS (default: true)
+    omitEmpty: true,            // Remove empty/null values (default: true)
+    fallbacks: true,            // Apply fallback logic (default: true)
+  },
 });
 ```
 
@@ -104,36 +191,42 @@ When `fallbacks: true` (default):
 
 ## Custom Plugins
 
-Create your own plugin to extract any data from the HTML:
+A plugin is a function that receives a `ScrapeContext` and returns a `PluginResult`:
 
 ```typescript
 import type { Plugin } from 'web-meta-scraper';
 
-const pricePlugin: Plugin = (html, options) => {
-  // Parse HTML and extract what you need
-  // Return an object - keys outside of base/openGraph/twitter/jsonLd
-  // are added directly to the result
-  return { price: '$99.99', currency: 'USD' };
+const pricePlugin: Plugin = (ctx) => {
+  const { $ } = ctx; // Cheerio instance
+
+  const price = $('[itemprop="price"]').attr('content');
+  const currency = $('[itemprop="priceCurrency"]').attr('content');
+
+  return {
+    name: 'price',
+    data: { price, currency },
+  };
 };
 
-const scrape = createScraper([openGraph, pricePlugin]);
-const metadata = await scrape('https://shop.example.com');
-// { title: "Product", price: "$99.99", currency: "USD", ... }
+const scraper = createScraper({
+  plugins: [openGraph, pricePlugin],
+  rules: [
+    ...DEFAULT_RULES,
+    { field: 'price', sources: [{ plugin: 'price', key: 'price', priority: 1 }] },
+    { field: 'currency', sources: [{ plugin: 'price', key: 'currency', priority: 1 }] },
+  ],
+});
 ```
 
 ## Error Handling
 
-The scraper throws `ScraperError` for fetch failures and invalid inputs:
-
 ```typescript
-import { createScraper, openGraph } from 'web-meta-scraper';
-
-const scrape = createScraper([openGraph]);
+import { scrape, ScraperError } from 'web-meta-scraper';
 
 try {
-  const metadata = await scrape('https://example.com');
+  const result = await scrape('https://example.com');
 } catch (error) {
-  if (error.name === 'ScraperError') {
+  if (error instanceof ScraperError) {
     console.error(error.message); // e.g. "Request timeout after 30000ms"
     console.error(error.cause);   // Original error, if any
   }
