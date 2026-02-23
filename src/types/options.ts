@@ -4,6 +4,5 @@ export interface ScraperOptions {
   timeout?: number;
   userAgent?: string;
   followRedirects?: boolean;
-  validateUrls?: boolean;
-  extractRaw?: boolean;
+  maxContentLength?: number;
 }

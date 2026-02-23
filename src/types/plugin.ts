@@ -1,7 +1,10 @@
-import type { Metadata } from './metadata';
-import type { ScraperOptions } from './options';
+import type { ScrapeContext } from '../core/context';
+
+export interface PluginResult {
+  name: string;
+  data: Record<string, unknown>;
+}
 
 export type Plugin = (
-  html: string,
-  options: ScraperOptions,
-) => Promise<Partial<Metadata>>;
+  ctx: ScrapeContext,
+) => PluginResult | Promise<PluginResult>;
