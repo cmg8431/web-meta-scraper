@@ -35,7 +35,7 @@ jobs:
         run: pnpm typecheck
 
       - name: Build
-        run: pnpm build
+        run: pnpm build && pnpm --filter web-meta-scraper-mcp build && pnpm --filter docs build
 
       - name: Test
         run: pnpm test -- --run --coverage

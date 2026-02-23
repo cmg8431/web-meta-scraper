@@ -31,7 +31,7 @@ jobs:
         run: pnpm install
 
       - name: Build
-        run: pnpm -r build
+        run: pnpm build && pnpm --filter web-meta-scraper-mcp build && pnpm --filter docs build
 
       - name: Type Check
         run: pnpm typecheck
