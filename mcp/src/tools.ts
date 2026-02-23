@@ -10,13 +10,19 @@ import {
   favicons,
   feeds,
   robots,
+  date,
+  logo,
+  lang,
+  video,
+  audio,
+  iframe,
   validateMetadata,
   extractContent,
   extractFromHtml,
 } from 'web-meta-scraper';
 import { z } from 'zod';
 
-const defaultPlugins = [metaTags, openGraph, twitter, jsonLd, favicons, feeds, robots];
+const defaultPlugins = [metaTags, openGraph, twitter, jsonLd, favicons, feeds, robots, date, logo, lang, video, audio, iframe];
 
 function jsonResponse(data: unknown) {
   return {
