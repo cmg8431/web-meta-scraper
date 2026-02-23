@@ -1,0 +1,93 @@
+# Metadata Validator
+
+`validateMetadata()` analyzes scraped metadata against 14 SEO rules and returns a score from 0 to 100, along with categorized issues.
+
+## Basic Usage
+
+```typescript
+import { scrape, validateMetadata } from 'web-meta-scraper';
+
+const result = await scrape('https://example.com');
+const validation = validateMetadata(result);
+
+console.log(validation.score);    // 85
+console.log(validation.summary);  // { errors: 0, warnings: 2, info: 1 }
+console.log(validation.issues);   // [{ severity: 'warning', field: 'og:image', ... }, ...]
+```
+
+## Result Structure
+
+```typescript
+interface ValidationResult {
+  score: number;       // 0–100, starts at 100 and deducts per issue
+  issues: ValidationIssue[];
+  summary: { errors: number; warnings: number; info: number };
+  metadata: ResolvedMetadata;
+}
+
+interface ValidationIssue {
+  severity: 'error' | 'warning' | 'info';
+  category: 'essential' | 'opengraph' | 'twitter' | 'structured-data' | 'security';
+  field: string;
+  message: string;
+}
+```
+
+## Validation Rules
+
+### Essential
+
+| Field | Severity | Penalty | Condition |
+| --- | --- | --- | --- |
+| `title` | error | -15 | Missing page title |
+| `description` | error | -15 | Missing meta description |
+| `description` | warning | -5 | Too short (&lt;50 chars) or too long (&gt;160 chars) |
+| `favicon` | warning | -3 | Missing favicon |
+| `canonical` | warning | -5 | Missing canonical URL |
+
+### Open Graph
+
+| Field | Severity | Penalty | Condition |
+| --- | --- | --- | --- |
+| `og:title` | warning | -8 | Missing og:title tag |
+| `og:description` | warning | -8 | Missing og:description tag |
+| `og:image` | warning | -8 | Missing og:image tag |
+| `og:url` | info | -3 | Missing og:url tag |
+| `og:type` | info | -2 | Missing og:type tag |
+
+### Twitter
+
+| Field | Severity | Penalty | Condition |
+| --- | --- | --- | --- |
+| `twitter:card` | warning | -5 | Missing twitter:card tag |
+| `twitter:title` | info | -3 | Missing twitter:title tag |
+| `twitter:description` | info | -3 | Missing twitter:description tag |
+
+### Structured Data
+
+| Field | Severity | Penalty | Condition |
+| --- | --- | --- | --- |
+| `json-ld` | warning | -7 | Missing JSON-LD structured data |
+
+### Security
+
+| Field | Severity | Penalty | Condition |
+| --- | --- | --- | --- |
+| `image` | warning | -5 | Image URL uses insecure HTTP protocol |
+
+## Use with createScraper
+
+```typescript
+import { createScraper, metaTags, openGraph, twitter, jsonLd, validateMetadata } from 'web-meta-scraper';
+
+const scraper = createScraper({
+  plugins: [metaTags, openGraph, twitter, jsonLd],
+});
+
+const result = await scraper.scrapeUrl('https://example.com');
+const { score, issues } = validateMetadata(result);
+
+// Filter by severity
+const errors = issues.filter(i => i.severity === 'error');
+const warnings = issues.filter(i => i.severity === 'warning');
+```

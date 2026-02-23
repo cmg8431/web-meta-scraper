@@ -1,0 +1,45 @@
+# Content Extractor
+
+`extractContent()` and `extractFromHtml()` extract the main text content from a web page, removing noise elements like navigation, ads, and sidebars.
+
+## Basic Usage
+
+```typescript
+import { extractContent, extractFromHtml } from 'web-meta-scraper';
+
+// From URL
+const result = await extractContent('https://example.com/article');
+
+// From HTML string
+const result = extractFromHtml('<html>...</html>');
+
+console.log(result.content);       // "Article text content..."
+console.log(result.wordCount);     // 1234
+console.log(result.language);      // "en"
+console.log(result.metadata);      // { title: "Article Title", description: "..." }
+```
+
+## Result Structure
+
+```typescript
+interface ExtractContentResult {
+  content: string;                                  // Extracted main text
+  metadata: { title: string; description: string }; // Page title and meta description
+  wordCount: number;                                // Word count (CJK-aware)
+  language: string;                                 // Language from html lang attribute
+}
+```
+
+## How It Works
+
+1. **Metadata extraction** — Extracts `<title>` and `<meta name="description">` before processing.
+2. **Noise removal** — Removes `<script>`, `<style>`, `<nav>`, `<header>`, `<footer>`, `<aside>`, ad containers, sidebars, popups, and other non-content elements.
+3. **Content area detection** — Searches for the main content area using selectors in order: `<article>`, `<main>`, `[role="main"]`, `.content`, `.post-content`, `.entry-content`, `.article-body`, `#content`. Falls back to `<body>` if none found.
+4. **Text normalization** — Collapses whitespace and ensures block elements produce line breaks.
+5. **Word counting** — Counts whitespace-separated words for Latin scripts and individual characters for CJK (Chinese, Japanese, Korean).
+
+## Use Cases
+
+- **AI agents** reading web page content for summarization or analysis
+- **Content indexing** for search or categorization
+- **Readability analysis** with word count and language detection

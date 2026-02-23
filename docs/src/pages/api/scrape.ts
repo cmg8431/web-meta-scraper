@@ -8,7 +8,7 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { url } = req.body;
+  const { url, action, stealth } = req.body;
 
   if (!url || typeof url !== 'string') {
     return res.status(400).json({ error: 'url field is required' });
@@ -30,13 +30,35 @@ export default async function handler(
       favicons,
       feeds,
       robots,
+      date,
+      logo,
+      lang,
+      video,
+      audio,
+      iframe,
+      validateMetadata,
+      extractContent,
     } = await import('web-meta-scraper');
 
+    const fetchOptions = stealth ? { stealth: true } : undefined;
+
+    if (action === 'extract') {
+      const content = await extractContent(url, fetchOptions);
+      return res.status(200).json(content);
+    }
+
     const scraper = createScraper({
-      plugins: [metaTags, openGraph, twitter, jsonLd, favicons, feeds, robots],
+      plugins: [metaTags, openGraph, twitter, jsonLd, favicons, feeds, robots, date, logo, lang, video, audio, iframe],
+      fetch: fetchOptions,
     });
 
     const result = await scraper.scrapeUrl(url);
+
+    if (action === 'validate') {
+      const validation = validateMetadata(result);
+      return res.status(200).json(validation);
+    }
+
     return res.status(200).json(result);
   } catch (e: any) {
     return res.status(500).json({ error: e.message || 'Scrape failed' });

@@ -4,8 +4,10 @@ import { Playground } from '@/components/playground/Playground';
 
 web-meta-scraper가 실시간으로 어떻게 동작하는지 확인해 보세요. 아래에 URL을 입력하면 Open Graph, Twitter Cards, JSON-LD, oEmbed, 파비콘, RSS/Atom 피드, robots 디렉티브를 포함한 메타데이터를 추출합니다.
 
-결과는 세 개의 탭으로 표시됩니다:
+결과는 다섯 개의 탭으로 표시됩니다:
 - **Preview** — OG 이미지, 제목, 설명, 발견된 파비콘, 피드 링크, robots 인덱싱 상태를 시각적으로 보여주는 카드.
+- **Validation** — SEO 점수(0–100)와 에러, 경고, 정보로 분류된 이슈 목록.
+- **Content** — 추출된 본문 텍스트와 언어 감지, 단어 수.
 - **Metadata** — [우선순위 규칙](/ko/docs/options#커스텀-리졸브-규칙)에 따라 병합된 최종 결과.
 - **Sources** — 각 플러그인의 원본 데이터로, 각 값이 어디서 왔는지 확인할 수 있습니다.
 

@@ -1,0 +1,93 @@
+# 메타데이터 검증
+
+`validateMetadata()`는 스크래핑된 메타데이터를 14개의 SEO 규칙에 따라 분석하고 0~100점 사이의 점수와 분류된 이슈를 반환합니다.
+
+## 기본 사용법
+
+```typescript
+import { scrape, validateMetadata } from 'web-meta-scraper';
+
+const result = await scrape('https://example.com');
+const validation = validateMetadata(result);
+
+console.log(validation.score);    // 85
+console.log(validation.summary);  // { errors: 0, warnings: 2, info: 1 }
+console.log(validation.issues);   // [{ severity: 'warning', field: 'og:image', ... }, ...]
+```
+
+## 결과 구조
+
+```typescript
+interface ValidationResult {
+  score: number;       // 0–100, 100에서 시작하여 이슈당 감점
+  issues: ValidationIssue[];
+  summary: { errors: number; warnings: number; info: number };
+  metadata: ResolvedMetadata;
+}
+
+interface ValidationIssue {
+  severity: 'error' | 'warning' | 'info';
+  category: 'essential' | 'opengraph' | 'twitter' | 'structured-data' | 'security';
+  field: string;
+  message: string;
+}
+```
+
+## 검증 규칙
+
+### 필수 항목
+
+| 필드 | 심각도 | 감점 | 조건 |
+| --- | --- | --- | --- |
+| `title` | error | -15 | 페이지 제목 누락 |
+| `description` | error | -15 | 메타 설명 누락 |
+| `description` | warning | -5 | 너무 짧음 (&lt;50자) 또는 너무 김 (&gt;160자) |
+| `favicon` | warning | -3 | 파비콘 누락 |
+| `canonical` | warning | -5 | canonical URL 누락 |
+
+### Open Graph
+
+| 필드 | 심각도 | 감점 | 조건 |
+| --- | --- | --- | --- |
+| `og:title` | warning | -8 | og:title 태그 누락 |
+| `og:description` | warning | -8 | og:description 태그 누락 |
+| `og:image` | warning | -8 | og:image 태그 누락 |
+| `og:url` | info | -3 | og:url 태그 누락 |
+| `og:type` | info | -2 | og:type 태그 누락 |
+
+### Twitter
+
+| 필드 | 심각도 | 감점 | 조건 |
+| --- | --- | --- | --- |
+| `twitter:card` | warning | -5 | twitter:card 태그 누락 |
+| `twitter:title` | info | -3 | twitter:title 태그 누락 |
+| `twitter:description` | info | -3 | twitter:description 태그 누락 |
+
+### 구조화된 데이터
+
+| 필드 | 심각도 | 감점 | 조건 |
+| --- | --- | --- | --- |
+| `json-ld` | warning | -7 | JSON-LD 구조화된 데이터 누락 |
+
+### 보안
+
+| 필드 | 심각도 | 감점 | 조건 |
+| --- | --- | --- | --- |
+| `image` | warning | -5 | 이미지 URL이 안전하지 않은 HTTP 프로토콜 사용 |
+
+## createScraper와 함께 사용
+
+```typescript
+import { createScraper, metaTags, openGraph, twitter, jsonLd, validateMetadata } from 'web-meta-scraper';
+
+const scraper = createScraper({
+  plugins: [metaTags, openGraph, twitter, jsonLd],
+});
+
+const result = await scraper.scrapeUrl('https://example.com');
+const { score, issues } = validateMetadata(result);
+
+// 심각도별 필터링
+const errors = issues.filter(i => i.severity === 'error');
+const warnings = issues.filter(i => i.severity === 'warning');
+```

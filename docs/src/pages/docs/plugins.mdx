@@ -3,10 +3,13 @@
 web-meta-scraper uses a plugin architecture. Each plugin extracts metadata from a specific source in the HTML.
 
 ```typescript
-import { createScraper, metaTags, openGraph, twitter, jsonLd, oembed } from 'web-meta-scraper';
+import {
+  createScraper, metaTags, openGraph, twitter, jsonLd, oembed,
+  favicons, feeds, robots, date, logo, lang, video, audio, iframe,
+} from 'web-meta-scraper';
 
 const scraper = createScraper({
-  plugins: [metaTags, openGraph, twitter, jsonLd, oembed],
+  plugins: [metaTags, openGraph, twitter, jsonLd, oembed, favicons, feeds, robots, date, logo, lang, video, audio, iframe],
 });
 ```
 
@@ -241,6 +244,188 @@ console.log(result.metadata.robots);
 //   noimageindex: false,
 //   notranslate: false,
 // }
+```
+
+## Date
+
+Extracts publication and modification dates from multiple sources including Open Graph article tags, Dublin Core metadata, JSON-LD structured data, and HTML `<time>` elements.
+
+```typescript
+import { createScraper, date } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [date] });
+```
+
+**Extracted fields:**
+
+| Field | Description |
+| --- | --- |
+| `date` | Publication date in ISO 8601 format |
+| `dateModified` | Modification date in ISO 8601 format |
+
+**Sources (in priority order):**
+
+1. `article:published_time` / `article:modified_time` (Open Graph)
+2. `meta[name="date"]`, `meta[name="DC.date"]`, `meta[name="DC.date.issued"]` (Dublin Core)
+3. JSON-LD `datePublished` / `dateModified`
+4. `<time datetime>` element (fallback)
+
+```typescript
+const result = await scraper.scrapeUrl('https://example.com/article');
+console.log(result.metadata.date);         // "2024-01-15T09:00:00.000Z"
+console.log(result.metadata.dateModified); // "2024-02-01T12:30:00.000Z"
+```
+
+## Logo
+
+Extracts the site logo URL from Open Graph, Schema.org microdata, and JSON-LD structured data.
+
+```typescript
+import { createScraper, logo } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [logo] });
+```
+
+**Extracted fields:**
+
+| Field | Description |
+| --- | --- |
+| `logo` | Fully resolved site logo URL |
+
+**Sources (in priority order):**
+
+1. `meta[property="og:logo"]`
+2. `meta[itemprop="logo"]` / `img[itemprop="logo"]`
+3. JSON-LD `logo` field from `Organization` / `Brand` / `Publisher`
+
+```typescript
+const result = await scraper.scrapeUrl('https://example.com');
+console.log(result.metadata.logo); // "https://example.com/logo.png"
+```
+
+## Lang
+
+Detects the primary language of the document as a BCP 47 language tag.
+
+```typescript
+import { createScraper, lang } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [lang] });
+```
+
+**Extracted fields:**
+
+| Field | Description |
+| --- | --- |
+| `lang` | BCP 47 primary language tag (e.g. `"en"`, `"ko"`, `"ja"`) |
+
+**Sources (in priority order):**
+
+1. `<html lang>` attribute
+2. `og:locale` (normalized — `en_US` → `en`)
+3. `meta[http-equiv="content-language"]`
+4. `meta[itemprop="inLanguage"]`
+5. JSON-LD `inLanguage` field
+
+```typescript
+const result = await scraper.scrapeUrl('https://example.com');
+console.log(result.metadata.lang); // "en"
+```
+
+## Video
+
+Discovers video resources from Open Graph video tags, Twitter player tags, HTML `<video>` elements, and JSON-LD `VideoObject` entries.
+
+```typescript
+import { createScraper, video } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [video] });
+```
+
+**Extracted fields:**
+
+Returns a `videos` array of `VideoEntry` objects:
+
+| Field | Description |
+| --- | --- |
+| `url` | Fully resolved video URL |
+| `type` | MIME type (e.g. `"video/mp4"`) |
+| `width` | Width in pixels |
+| `height` | Height in pixels |
+
+**Sources:**
+
+- `og:video`, `og:video:secure_url`, `og:video:type`, `og:video:width`, `og:video:height`
+- `twitter:player`, `twitter:player:width`, `twitter:player:height`
+- `<video>` and `<source>` elements
+- JSON-LD `VideoObject` with `contentUrl`
+
+```typescript
+const result = await scraper.scrapeUrl('https://example.com/video');
+console.log(result.metadata.videos);
+// [
+//   { url: "https://example.com/video.mp4", type: "video/mp4", width: 1920, height: 1080 },
+// ]
+```
+
+## Audio
+
+Discovers audio resources from Open Graph audio tags, HTML `<audio>` elements, and JSON-LD `AudioObject` entries.
+
+```typescript
+import { createScraper, audio } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [audio] });
+```
+
+**Extracted fields:**
+
+Returns an `audio` array of `AudioEntry` objects:
+
+| Field | Description |
+| --- | --- |
+| `url` | Fully resolved audio URL |
+| `type` | MIME type (e.g. `"audio/mpeg"`) |
+
+**Sources:**
+
+- `og:audio`, `og:audio:secure_url`, `og:audio:type`
+- `<audio>` and `<source>` elements
+- JSON-LD `AudioObject` with `contentUrl`
+
+```typescript
+const result = await scraper.scrapeUrl('https://example.com/podcast');
+console.log(result.metadata.audio);
+// [
+//   { url: "https://example.com/episode.mp3", type: "audio/mpeg" },
+// ]
+```
+
+## iFrame
+
+Generates an embeddable iframe HTML snippet from Twitter player tags, with fallback to oEmbed embed HTML.
+
+```typescript
+import { createScraper, iframe } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [iframe] });
+```
+
+**Extracted fields:**
+
+| Field | Description |
+| --- | --- |
+| `iframe` | Complete HTML `<iframe>` element string |
+
+**Sources:**
+
+1. `twitter:player` with `twitter:player:width` and `twitter:player:height`
+2. oEmbed `html` field (fallback, applied in core)
+
+```typescript
+const result = await scraper.scrapeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+console.log(result.metadata.iframe);
+// '<iframe src="https://..." width="640" height="360" frameborder="0" allowfullscreen></iframe>'
 ```
 
 ## Combining Plugins

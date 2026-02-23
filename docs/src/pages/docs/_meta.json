@@ -4,6 +4,8 @@
   "quick-start": "Quick Start",
   "plugins": "Plugins",
   "batch-scraping": "Batch Scraping",
+  "validator": "Metadata Validator",
+  "extractor": "Content Extractor",
   "options": "Options",
   "custom-plugins": "Custom Plugins",
   "error-handling": "Error Handling",

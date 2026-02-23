@@ -29,20 +29,30 @@ Options for `scrapeUrl()` HTTP requests:
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `timeout` | `number` | `30000` | Request timeout in milliseconds |
-| `userAgent` | `string` | `'Mozilla/5.0 (compatible; WebMetaScraper/2.0;)'` | User-Agent header |
+| `userAgent` | `string` | Chrome 131 UA | User-Agent header |
 | `followRedirects` | `boolean` | `true` | Follow HTTP redirects |
 | `maxContentLength` | `number` | `5242880` | Max response size in bytes (5MB) |
+| `stealth` | `boolean` | `false` | Use HTTP/2 with browser-like TLS fingerprint for improved compatibility |
+| `headers` | `Record<string, string>` | `undefined` | Additional headers to send with the request |
+
+### Stealth Mode
+
+When `stealth: true`, the fetcher uses **HTTP/2** with a **browser-like TLS fingerprint** (cipher suite, elliptic curves, signature algorithms). This improves compatibility with sites that restrict non-browser HTTP clients.
 
 ```typescript
 const scraper = createScraper({
-  plugins: [openGraph],
+  plugins: [metaTags, openGraph],
   fetch: {
-    timeout: 10000,
-    userAgent: 'MyBot/1.0',
-    maxContentLength: 1024 * 1024, // 1MB
+    stealth: true,
   },
 });
+
+const result = await scraper.scrapeUrl('https://example.com/product/123');
 ```
+
+> **Note:** Stealth mode mimics a real browser's TLS handshake and HTTP/2 settings. Use this option responsibly and ensure that your scraping activity complies with the target site's Terms of Service and `robots.txt` directives. This feature is intended for legitimate metadata extraction (similar to how social platforms generate link previews), not for circumventing access controls or performing large-scale data collection.
+>
+> Some sites may serve a JavaScript challenge page instead of actual content when they detect rapid successive requests from the same IP. Since this library does not execute JavaScript, such challenges cannot be solved automatically. If you encounter empty or missing metadata, consider adding a delay between requests.
 
 ## Post-Processing Options
 

@@ -1,0 +1,45 @@
+# 콘텐츠 추출
+
+`extractContent()`와 `extractFromHtml()`은 웹 페이지에서 네비게이션, 광고, 사이드바 등 노이즈를 제거하고 본문 텍스트를 추출합니다.
+
+## 기본 사용법
+
+```typescript
+import { extractContent, extractFromHtml } from 'web-meta-scraper';
+
+// URL에서 추출
+const result = await extractContent('https://example.com/article');
+
+// HTML 문자열에서 추출
+const result = extractFromHtml('<html>...</html>');
+
+console.log(result.content);       // "기사 본문 내용..."
+console.log(result.wordCount);     // 1234
+console.log(result.language);      // "ko"
+console.log(result.metadata);      // { title: "기사 제목", description: "..." }
+```
+
+## 결과 구조
+
+```typescript
+interface ExtractContentResult {
+  content: string;                                  // 추출된 본문 텍스트
+  metadata: { title: string; description: string }; // 페이지 제목과 메타 설명
+  wordCount: number;                                // 단어 수 (CJK 지원)
+  language: string;                                 // html lang 속성의 언어
+}
+```
+
+## 동작 방식
+
+1. **메타데이터 추출** — 처리 전에 `<title>`과 `<meta name="description">`을 추출합니다.
+2. **노이즈 제거** — `<script>`, `<style>`, `<nav>`, `<header>`, `<footer>`, `<aside>`, 광고 컨테이너, 사이드바, 팝업 등 비콘텐츠 요소를 제거합니다.
+3. **콘텐츠 영역 감지** — `<article>`, `<main>`, `[role="main"]`, `.content`, `.post-content`, `.entry-content`, `.article-body`, `#content` 순서로 메인 콘텐츠 영역을 탐색합니다. 없으면 `<body>`로 폴백합니다.
+4. **텍스트 정규화** — 공백을 합치고 블록 요소에서 줄바꿈을 생성합니다.
+5. **단어 수 계산** — 라틴 문자는 공백 기준, CJK(중국어, 일본어, 한국어)는 개별 문자를 단어로 계산합니다.
+
+## 활용 사례
+
+- **AI 에이전트**가 웹 페이지 콘텐츠를 읽어 요약이나 분석에 사용
+- **콘텐츠 인덱싱**으로 검색이나 분류에 활용
+- **가독성 분석** — 단어 수와 언어 감지 활용
