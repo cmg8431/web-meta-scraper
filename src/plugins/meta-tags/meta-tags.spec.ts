@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-
+import { createContext } from '../../core/context';
+import type { ScraperOptions } from '../../types/options';
 import { metaTags } from './meta-tags';
+
+async function run(html: string, options: Partial<ScraperOptions> = {}) {
+  const ctx = createContext(html, undefined, options as ScraperOptions);
+  return await metaTags(ctx);
+}
 
 describe('metaTags plugin', () => {
   const fullHTML = `
@@ -26,40 +32,36 @@ describe('metaTags plugin', () => {
     </html>
   `;
 
-  it('extracts all available metadata from complete HTML', async () => {
-    const result = await metaTags(fullHTML, { secureImages: true });
+  it('returns PluginResult with name "meta-tags"', async () => {
+    const result = await run(fullHTML);
+    expect(result.name).toBe('meta-tags');
+  });
 
-    expect(result.base).toMatchObject({
+  it('extracts all available metadata from complete HTML', async () => {
+    const result = await run(fullHTML);
+
+    expect(result.data).toMatchObject({
       title: 'Test Page',
       description: 'Page Description',
       keywords: ['key1', 'key2', 'key3'],
       author: 'John Doe',
       canonicalUrl: 'https://example.com/page',
-      favicon: 'https://example.com/favicon.ico',
+      favicon: 'http://example.com/favicon.ico',
     });
   });
 
   it('handles minimal HTML gracefully', async () => {
-    const result = await metaTags(minimalHTML, {});
+    const result = await run(minimalHTML);
 
-    expect(result.base).toMatchObject({
+    expect(result.data).toMatchObject({
       title: 'Minimal Page',
       keywords: [],
     });
   });
 
-  it('processes favicon URL based on secureImages option', async () => {
-    const withSecureImages = await metaTags(fullHTML, { secureImages: true });
-    expect(withSecureImages.base?.favicon).toBe(
-      'https://example.com/favicon.ico',
-    );
-
-    const withoutSecureImages = await metaTags(fullHTML, {
-      secureImages: false,
-    });
-    expect(withoutSecureImages.base?.favicon).toBe(
-      'http://example.com/favicon.ico',
-    );
+  it('returns raw favicon URL without secure conversion', async () => {
+    const result = await run(fullHTML);
+    expect(result.data.favicon).toBe('http://example.com/favicon.ico');
   });
 
   it('handles malformed keywords correctly', async () => {
@@ -71,14 +73,14 @@ describe('metaTags plugin', () => {
       </html>
     `;
 
-    const result = await metaTags(malformedHTML, {});
-    expect(result.base?.keywords).toEqual(['key1', 'key2', 'key3']);
+    const result = await run(malformedHTML);
+    expect(result.data.keywords).toEqual(['key1', 'key2', 'key3']);
   });
 
   it('returns empty strings for missing metadata', async () => {
-    const result = await metaTags('<html></html>', {});
+    const result = await run('<html></html>');
 
-    expect(result.base).toMatchObject({
+    expect(result.data).toMatchObject({
       title: '',
       description: '',
       author: '',

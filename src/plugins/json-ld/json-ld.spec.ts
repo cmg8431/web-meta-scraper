@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest';
-
+import { createContext } from '../../core/context';
+import type { JsonLdMetadata } from '../../types/metadata';
 import { jsonLd } from './json-ld';
 
-describe('jsonLd', () => {
+async function run(html: string) {
+  const ctx = createContext(html, undefined, {});
+  return await jsonLd(ctx);
+}
+
+describe('jsonLd plugin', () => {
+  it('returns PluginResult with name "json-ld"', async () => {
+    const result = await run('<html></html>');
+    expect(result.name).toBe('json-ld');
+  });
+
   it('retrieves single json-ld if html has it', async () => {
     const html = `
      <!DOCTYPE html>
@@ -21,11 +32,12 @@ describe('jsonLd', () => {
      </html>
    `;
 
-    const result = await jsonLd(html);
-    expect(result.jsonLd.length).toBe(1);
-    expect(result.jsonLd[0]['@type']).toBe('Article');
-    expect(result.jsonLd[0].headline).toBe('Test Article');
-    expect(result.jsonLd[0].datePublished).toBe('2024-02-02');
+    const result = await run(html);
+    const data = result.data.jsonLd as JsonLdMetadata[];
+    expect(data.length).toBe(1);
+    expect(data[0]['@type']).toBe('Article');
+    expect(data[0].headline).toBe('Test Article');
+    expect(data[0].datePublished).toBe('2024-02-02');
   });
 
   it('retrieves multiple json-ld scripts', async () => {
@@ -52,10 +64,11 @@ describe('jsonLd', () => {
      </html>
    `;
 
-    const result = await jsonLd(html);
-    expect(result.jsonLd.length).toBe(2);
-    expect(result.jsonLd[0]['@type']).toBe('Event');
-    expect(result.jsonLd[1]['@type']).toBe('BreadcrumbList');
+    const result = await run(html);
+    const data = result.data.jsonLd as JsonLdMetadata[];
+    expect(data.length).toBe(2);
+    expect(data[0]['@type']).toBe('Event');
+    expect(data[1]['@type']).toBe('BreadcrumbList');
   });
 
   it('handles json-ld with @graph syntax', async () => {
@@ -83,10 +96,11 @@ describe('jsonLd', () => {
      </html>
    `;
 
-    const result = await jsonLd(html);
-    expect(result.jsonLd.length).toBe(2);
-    expect(result.jsonLd[0]['@type']).toBe('Organization');
-    expect(result.jsonLd[1]['@type']).toBe('Person');
+    const result = await run(html);
+    const data = result.data.jsonLd as JsonLdMetadata[];
+    expect(data.length).toBe(2);
+    expect(data[0]['@type']).toBe('Organization');
+    expect(data[1]['@type']).toBe('Person');
   });
 
   it('returns empty array for invalid json-ld', async () => {
@@ -102,8 +116,8 @@ describe('jsonLd', () => {
      </html>
    `;
 
-    const result = await jsonLd(html);
-    expect(result.jsonLd).toEqual([]);
+    const result = await run(html);
+    expect(result.data.jsonLd).toEqual([]);
   });
 
   it('handles empty html without json-ld', async () => {
@@ -115,7 +129,7 @@ describe('jsonLd', () => {
      </html>
    `;
 
-    const result = await jsonLd(html);
-    expect(result.jsonLd).toEqual([]);
+    const result = await run(html);
+    expect(result.data.jsonLd).toEqual([]);
   });
 });

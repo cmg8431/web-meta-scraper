@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-
+import { createContext } from '../../core/context';
+import type { ScraperOptions } from '../../types/options';
 import { openGraph } from './open-graph';
+
+async function run(html: string, options: Partial<ScraperOptions> = {}) {
+  const ctx = createContext(html, undefined, options as ScraperOptions);
+  return await openGraph(ctx);
+}
 
 describe('openGraph plugin', () => {
   const fullHTML = `
@@ -18,13 +24,18 @@ describe('openGraph plugin', () => {
     </html>
   `;
 
-  it('extracts all available OpenGraph metadata', async () => {
-    const result = await openGraph(fullHTML, { secureImages: true });
+  it('returns PluginResult with name "open-graph"', async () => {
+    const result = await run(fullHTML);
+    expect(result.name).toBe('open-graph');
+  });
 
-    expect(result.openGraph).toMatchObject({
+  it('extracts all available OpenGraph metadata', async () => {
+    const result = await run(fullHTML);
+
+    expect(result.data).toMatchObject({
       title: 'OG Test Title',
       description: 'OG Test Description',
-      image: 'https://example.com/image.jpg',
+      image: 'http://example.com/image.jpg',
       url: 'https://example.com/page',
       type: 'article',
       siteName: 'Test Site',
@@ -34,12 +45,12 @@ describe('openGraph plugin', () => {
 
   it('handles missing OpenGraph metadata', async () => {
     const html = '<html><head></head></html>';
-    const result = await openGraph(html, {});
+    const result = await run(html);
 
-    expect(result.openGraph).toMatchObject({});
+    expect(result.data).toMatchObject({});
   });
 
-  it('truncates description based on maxDescriptionLength', async () => {
+  it('returns raw description without truncation', async () => {
     const longDescription = 'a'.repeat(200);
     const html = `
       <html>
@@ -49,11 +60,11 @@ describe('openGraph plugin', () => {
       </html>
     `;
 
-    const result = await openGraph(html, { maxDescriptionLength: 100 });
-    expect(result.openGraph?.description?.length).toBeLessThanOrEqual(103); // 100 + '...'
+    const result = await run(html);
+    expect(result.data.description).toBe(longDescription);
   });
 
-  it('handles secure image conversion', async () => {
+  it('returns raw image URL without secure conversion', async () => {
     const html = `
       <html>
         <head>
@@ -62,13 +73,8 @@ describe('openGraph plugin', () => {
       </html>
     `;
 
-    const secureResult = await openGraph(html, { secureImages: true });
-    expect(secureResult.openGraph?.image).toBe('https://example.com/image.jpg');
-
-    const insecureResult = await openGraph(html, { secureImages: false });
-    expect(insecureResult.openGraph?.image).toBe(
-      'http://example.com/image.jpg',
-    );
+    const result = await run(html);
+    expect(result.data.image).toBe('http://example.com/image.jpg');
   });
 
   it('handles malformed OpenGraph tags gracefully', async () => {
@@ -82,8 +88,8 @@ describe('openGraph plugin', () => {
       </html>
     `;
 
-    const result = await openGraph(html, {});
-    expect(result.openGraph?.title).toBe('');
-    expect(result.openGraph?.description).toBeUndefined();
+    const result = await run(html);
+    expect(result.data.title).toBe('');
+    expect(result.data.description).toBeUndefined();
   });
 });

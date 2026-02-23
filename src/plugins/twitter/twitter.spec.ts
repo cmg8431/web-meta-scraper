@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-
+import { createContext } from '../../core/context';
+import type { ScraperOptions } from '../../types/options';
 import { twitter } from './twitter';
+
+async function run(html: string, options: Partial<ScraperOptions> = {}) {
+  const ctx = createContext(html, undefined, options as ScraperOptions);
+  return await twitter(ctx);
+}
 
 describe('twitter plugin', () => {
   const fullHTML = `
@@ -17,13 +23,18 @@ describe('twitter plugin', () => {
     </html>
   `;
 
-  it('extracts all available Twitter card metadata', async () => {
-    const result = await twitter(fullHTML, { secureImages: true });
+  it('returns PluginResult with name "twitter"', async () => {
+    const result = await run(fullHTML);
+    expect(result.name).toBe('twitter');
+  });
 
-    expect(result.twitter).toMatchObject({
+  it('extracts all available Twitter card metadata', async () => {
+    const result = await run(fullHTML);
+
+    expect(result.data).toMatchObject({
       title: 'Twitter Test Title',
       description: 'Twitter Test Description',
-      image: 'https://example.com/image.jpg',
+      image: 'http://example.com/image.jpg',
       card: 'summary_large_image',
       site: '@testsite',
       creator: '@testuser',
@@ -32,14 +43,14 @@ describe('twitter plugin', () => {
 
   it('handles missing Twitter metadata', async () => {
     const html = '<html><head></head></html>';
-    const result = await twitter(html, {});
+    const result = await run(html);
 
-    expect(result.twitter).toMatchObject({
+    expect(result.data).toMatchObject({
       title: '',
     });
   });
 
-  it('truncates description based on maxDescriptionLength', async () => {
+  it('returns raw description without truncation', async () => {
     const longDescription = 'a'.repeat(200);
     const html = `
       <html>
@@ -49,11 +60,11 @@ describe('twitter plugin', () => {
       </html>
     `;
 
-    const result = await twitter(html, { maxDescriptionLength: 100 });
-    expect(result.twitter?.description?.length).toBeLessThanOrEqual(103); // 100 + '...'
+    const result = await run(html);
+    expect(result.data.description).toBe(longDescription);
   });
 
-  it('handles secure image conversion', async () => {
+  it('returns raw image URL without secure conversion', async () => {
     const html = `
       <html>
         <head>
@@ -62,11 +73,8 @@ describe('twitter plugin', () => {
       </html>
     `;
 
-    const secureResult = await twitter(html, { secureImages: true });
-    expect(secureResult.twitter?.image).toBe('https://example.com/image.jpg');
-
-    const insecureResult = await twitter(html, { secureImages: false });
-    expect(insecureResult.twitter?.image).toBe('http://example.com/image.jpg');
+    const result = await run(html);
+    expect(result.data.image).toBe('http://example.com/image.jpg');
   });
 
   it('handles malformed Twitter tags gracefully', async () => {
@@ -80,8 +88,8 @@ describe('twitter plugin', () => {
       </html>
     `;
 
-    const result = await twitter(html, {});
-    expect(result.twitter?.title).toBe('');
-    expect(result.twitter?.description).toBeUndefined();
+    const result = await run(html);
+    expect(result.data.title).toBe('');
+    expect(result.data.description).toBeUndefined();
   });
 });
