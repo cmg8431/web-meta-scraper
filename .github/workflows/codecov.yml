@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  codecov:
+  ci:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -23,13 +23,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
-          cache: 'yarn'
+          cache: 'pnpm'
 
       - name: Install Dependencies
-        run: yarn install
+        run: pnpm install
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type Check
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
 
       - name: Test
-        run: yarn test
+        run: pnpm test -- --run --coverage
 
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v4
