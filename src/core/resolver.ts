@@ -9,6 +9,12 @@ export const DEFAULT_RULES: ResolveRule[] = [
   {
     field: 'title',
     sources: [
+      { plugin: 'youtube', key: 'title', priority: 10 },
+      { plugin: 'x', key: 'title', priority: 10 },
+      { plugin: 'amazon', key: 'title', priority: 10 },
+      { plugin: 'tiktok', key: 'title', priority: 10 },
+      { plugin: 'reddit', key: 'title', priority: 10 },
+      { plugin: 'github', key: 'title', priority: 10 },
       { plugin: 'open-graph', key: 'title', priority: 3 },
       { plugin: 'meta-tags', key: 'title', priority: 2 },
       { plugin: 'twitter', key: 'title', priority: 1 },
@@ -25,6 +31,9 @@ export const DEFAULT_RULES: ResolveRule[] = [
   {
     field: 'image',
     sources: [
+      { plugin: 'youtube', key: 'image', priority: 10 },
+      { plugin: 'x', key: 'image', priority: 10 },
+      { plugin: 'amazon', key: 'image', priority: 10 },
       { plugin: 'open-graph', key: 'image', priority: 2 },
       { plugin: 'twitter', key: 'image', priority: 1 },
     ],
@@ -42,7 +51,14 @@ export const DEFAULT_RULES: ResolveRule[] = [
   },
   {
     field: 'author',
-    sources: [{ plugin: 'meta-tags', key: 'author', priority: 1 }],
+    sources: [
+      { plugin: 'x', key: 'author', priority: 10 },
+      { plugin: 'instagram', key: 'author', priority: 10 },
+      { plugin: 'youtube', key: 'author', priority: 10 },
+      { plugin: 'reddit', key: 'author', priority: 10 },
+      { plugin: 'github', key: 'author', priority: 10 },
+      { plugin: 'meta-tags', key: 'author', priority: 1 },
+    ],
   },
   {
     field: 'keywords',
@@ -71,6 +87,18 @@ export const DEFAULT_RULES: ResolveRule[] = [
   {
     field: 'twitterCreator',
     sources: [{ plugin: 'twitter', key: 'creator', priority: 1 }],
+  },
+  {
+    field: 'publisher',
+    sources: [
+      { plugin: 'youtube', key: 'publisher', priority: 10 },
+      { plugin: 'x', key: 'publisher', priority: 10 },
+      { plugin: 'amazon', key: 'publisher', priority: 10 },
+      { plugin: 'instagram', key: 'publisher', priority: 10 },
+      { plugin: 'tiktok', key: 'publisher', priority: 10 },
+      { plugin: 'reddit', key: 'publisher', priority: 10 },
+      { plugin: 'github', key: 'publisher', priority: 10 },
+    ],
   },
   {
     field: 'jsonLd',

@@ -138,6 +138,7 @@ export interface ResolvedMetadata {
   twitterCard?: string;
   twitterSite?: string;
   twitterCreator?: string;
+  publisher?: string;
   jsonLd?: JsonLdMetadata[];
   oembed?: OEmbedData;
   date?: string;

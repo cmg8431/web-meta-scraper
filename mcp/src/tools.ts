@@ -16,13 +16,24 @@ import {
   video,
   audio,
   iframe,
+  youtube,
+  x,
+  amazon,
+  instagram,
+  tiktok,
+  reddit,
+  github,
   validateMetadata,
   extractContent,
   extractFromHtml,
 } from 'web-meta-scraper';
 import { z } from 'zod';
 
-const defaultPlugins = [metaTags, openGraph, twitter, jsonLd, favicons, feeds, robots, date, logo, lang, video, audio, iframe];
+const defaultPlugins = [
+  metaTags, openGraph, twitter, jsonLd, favicons, feeds, robots,
+  date, logo, lang, video, audio, iframe,
+  youtube, x, amazon, instagram, tiktok, reddit, github,
+];
 
 function jsonResponse(data: unknown) {
   return {
