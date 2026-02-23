@@ -1,0 +1,29 @@
+{
+  "name": "web-meta-scraper-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for web-meta-scraper — extract metadata from URLs and HTML via Claude Code",
+  "license": "MIT",
+  "author": "cmg8431 <cmg8431@gmail.com>",
+  "repository": "https://github.com/cmg8431/web-meta-scraper.git",
+  "type": "module",
+  "bin": "./dist/index.js",
+  "files": [
+    "dist/*"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "web-meta-scraper": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "zod": "^3.25.32"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

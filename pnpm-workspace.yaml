@@ -1,6 +1,7 @@
 packages:
   - .
   - docs
+  - mcp
 
 ignoredBuiltDependencies:
   - esbuild
