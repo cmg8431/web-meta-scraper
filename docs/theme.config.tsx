@@ -1,5 +1,3 @@
-import { useIsDarkMode } from '@/hooks/use-is-dark-mode';
-import Image from 'next/image';
 import { useRouter } from 'next/router';
 import type { DocsThemeConfig } from 'nextra-theme-docs';
 import { useConfig } from 'nextra-theme-docs';
@@ -13,25 +11,17 @@ const config: DocsThemeConfig = {
     const { asPath } = useRouter();
     if (asPath !== '/') {
       return {
-        titleTemplate: '%s – meta-scrapper',
+        titleTemplate: '%s – web-meta-scraper',
       };
     }
   },
-  logo: function useLogo() {
-    const isDarkMode = useIsDarkMode();
-
-    return (
-      <Image
-        src={isDarkMode ? '/logo-white.png' : '/logo.png'}
-        alt="logo"
-        width={120}
-        height={48}
-      />
-    );
-  },
+  logo: (
+    <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>
+      web-meta-scraper
+    </span>
+  ),
   head: function useHead() {
     const { title } = useConfig();
-    const { route } = useRouter();
 
     return (
       <>
@@ -40,27 +30,11 @@ const config: DocsThemeConfig = {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta httpEquiv="Content-Language" content="en" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:image" content={'/og.png'} />
         <meta
           name="og:title"
-          content={title ? title + ' – meta-scrapper' : 'meta-scrapper'}
+          content={title ? title + ' – web-meta-scraper' : 'web-meta-scraper'}
         />
-        <meta name="og:image" content={'/og.png'} />
-        <meta name="apple-mobile-web-app-title" content="Nextra" />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="icon" href="/favicon.png" type="image/png" />
-        <link
-          rel="icon"
-          href="/favicon-dark.svg"
-          type="image/svg+xml"
-          media="(prefers-color-scheme: dark)"
-        />
-        <link
-          rel="icon"
-          href="/favicon-dark.png"
-          type="image/png"
-          media="(prefers-color-scheme: dark)"
-        />
+        <meta name="apple-mobile-web-app-title" content="web-meta-scraper" />
       </>
     );
   },
@@ -76,8 +50,6 @@ const config: DocsThemeConfig = {
   },
   footer: {
     text: function useText() {
-      const isDarkMode = useIsDarkMode();
-
       return (
         <div className="flex w-full flex-col items-center sm:items-start">
           <div>
@@ -101,6 +73,10 @@ const config: DocsThemeConfig = {
   toc: {
     backToTop: true,
   },
+  i18n: [
+    { locale: 'en', text: 'English' },
+    { locale: 'ko', text: '한국어' },
+  ],
 };
 
 export default config;
