@@ -1,7 +1,7 @@
 import type { FetchOptions } from '../fetcher';
 import { fetchHtml } from '../fetcher';
 import type { Plugin, PluginResult } from '../types/plugin';
-import type { ResolvedMetadata, ScraperResult } from '../types/result';
+import type { FaviconEntry, ResolvedMetadata, ScraperResult } from '../types/result';
 import { toNormalizedText, toTruncatedText } from '../utils/text';
 import { createContext } from './context';
 import { ScraperError } from './errors';
@@ -88,6 +88,32 @@ function applyFallbacks(metadata: Record<string, unknown>): void {
       // ignore invalid URL
     }
   }
+
+  // Resolve relative logo URLs
+  if (
+    typeof metadata.logo === 'string' &&
+    typeof metadata.url === 'string' &&
+    metadata.logo.startsWith('/')
+  ) {
+    try {
+      metadata.logo = new URL(metadata.logo, metadata.url).href;
+    } catch {
+      // ignore invalid URL
+    }
+  }
+
+  // Best favicon selection: pick from favicons[] when favicon is missing
+  if (!metadata.favicon && Array.isArray(metadata.favicons) && metadata.favicons.length > 0) {
+    metadata.favicon = selectBestFavicon(metadata.favicons as FaviconEntry[]);
+  }
+
+  // iframe oEmbed fallback
+  if (!metadata.iframe) {
+    const oembed = metadata.oembed as Record<string, unknown> | undefined;
+    if (oembed && typeof oembed.html === 'string') {
+      metadata.iframe = oembed.html;
+    }
+  }
 }
 
 function postProcess(
@@ -106,7 +132,7 @@ function postProcess(
   }
 
   if (opts.secureImages) {
-    for (const key of ['image', 'favicon'] as const) {
+    for (const key of ['image', 'favicon', 'logo'] as const) {
       const val = metadata[key];
       if (typeof val !== 'string') continue;
       if (val.startsWith('http:')) {
@@ -116,6 +142,52 @@ function postProcess(
       }
     }
   }
+}
+
+const FORMAT_SCORE: Record<string, number> = {
+  'image/png': 4,
+  'image/jpeg': 3,
+  'image/jpg': 3,
+  'image/svg+xml': 2,
+  'image/x-icon': 1,
+};
+
+function selectBestFavicon(favicons: FaviconEntry[]): string {
+  let bestUrl = favicons[0].url;
+  let bestScore = -1;
+
+  for (const entry of favicons) {
+    if (entry.type === 'manifest') continue;
+    let score = 0;
+
+    // Size score: parse "NxN" and use the larger dimension
+    if (entry.sizes) {
+      const match = entry.sizes.match(/(\d+)x(\d+)/);
+      if (match) {
+        score += Math.max(Number(match[1]), Number(match[2]));
+      }
+    }
+
+    // Format score bonus
+    if (entry.type && FORMAT_SCORE[entry.type]) {
+      score += FORMAT_SCORE[entry.type] * 1000;
+    } else if (entry.url.endsWith('.png')) {
+      score += 4000;
+    } else if (entry.url.endsWith('.jpg') || entry.url.endsWith('.jpeg')) {
+      score += 3000;
+    } else if (entry.url.endsWith('.svg')) {
+      score += 2000;
+    } else if (entry.url.endsWith('.ico')) {
+      score += 1000;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestUrl = entry.url;
+    }
+  }
+
+  return bestUrl;
 }
 
 function buildSources(

@@ -76,6 +76,36 @@ export interface RobotsInfo {
   notranslate: boolean;
 }
 
+/**
+ * Represents a video resource discovered in an HTML document.
+ *
+ * Extracted from `og:video` meta tags, `<video>` / `<source>` elements,
+ * Twitter player cards, or JSON-LD VideoObject entries.
+ */
+export interface VideoEntry {
+  /** Fully resolved URL of the video resource */
+  url: string;
+  /** MIME type of the video (e.g. "video/mp4") */
+  type?: string;
+  /** Video width in pixels */
+  width?: number;
+  /** Video height in pixels */
+  height?: number;
+}
+
+/**
+ * Represents an audio resource discovered in an HTML document.
+ *
+ * Extracted from `og:audio` meta tags, `<audio>` / `<source>` elements,
+ * or JSON-LD AudioObject entries.
+ */
+export interface AudioEntry {
+  /** Fully resolved URL of the audio resource */
+  url: string;
+  /** MIME type of the audio (e.g. "audio/mpeg") */
+  type?: string;
+}
+
 export interface OEmbedData {
   type?: string;
   version?: string;
@@ -110,6 +140,13 @@ export interface ResolvedMetadata {
   twitterCreator?: string;
   jsonLd?: JsonLdMetadata[];
   oembed?: OEmbedData;
+  date?: string;
+  dateModified?: string;
+  logo?: string;
+  lang?: string;
+  videos?: VideoEntry[];
+  audio?: AudioEntry[];
+  iframe?: string;
   favicons?: FaviconEntry[];
   feeds?: FeedEntry[];
   robots?: RobotsInfo;

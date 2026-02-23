@@ -92,6 +92,34 @@ export const DEFAULT_RULES: ResolveRule[] = [
     field: 'robots',
     sources: [{ plugin: 'robots', key: 'robots', priority: 1 }],
   },
+  {
+    field: 'date',
+    sources: [{ plugin: 'date', key: 'date', priority: 1 }],
+  },
+  {
+    field: 'dateModified',
+    sources: [{ plugin: 'date', key: 'dateModified', priority: 1 }],
+  },
+  {
+    field: 'logo',
+    sources: [{ plugin: 'logo', key: 'logo', priority: 1 }],
+  },
+  {
+    field: 'lang',
+    sources: [{ plugin: 'lang', key: 'lang', priority: 1 }],
+  },
+  {
+    field: 'videos',
+    sources: [{ plugin: 'video', key: 'videos', priority: 1 }],
+  },
+  {
+    field: 'audio',
+    sources: [{ plugin: 'audio', key: 'audio', priority: 1 }],
+  },
+  {
+    field: 'iframe',
+    sources: [{ plugin: 'iframe', key: 'iframe', priority: 1 }],
+  },
 ];
 
 export function resolve(

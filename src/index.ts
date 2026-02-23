@@ -12,6 +12,7 @@ export type { FetchOptions } from './fetcher';
 export { fetchHtml } from './fetcher';
 export * from './plugins';
 export type {
+  AudioEntry,
   FaviconEntry,
   FeedEntry,
   JsonLdMetadata,
@@ -22,6 +23,7 @@ export type {
   RobotsInfo,
   ScraperOptions,
   ScraperResult,
+  VideoEntry,
 } from './types';
 export type {
   ValidationIssue,
