@@ -1,1 +1,59 @@
-# web-meta-scraper 설치하기
+# Installation
+
+Install `web-meta-scraper` using your preferred package manager:
+
+import { Tabs, Tab } from 'nextra/components';
+
+<Tabs items={['npm', 'yarn', 'pnpm', 'bun']}>
+  <Tab>
+    ```bash
+    npm install web-meta-scraper
+    ```
+  </Tab>
+  <Tab>
+    ```bash
+    yarn add web-meta-scraper
+    ```
+  </Tab>
+  <Tab>
+    ```bash
+    pnpm add web-meta-scraper
+    ```
+  </Tab>
+  <Tab>
+    ```bash
+    bun add web-meta-scraper
+    ```
+  </Tab>
+</Tabs>
+
+## Requirements
+
+- **Node.js** 18 or later
+- **TypeScript** 5.0+ (optional, but recommended)
+
+## Module Formats
+
+web-meta-scraper ships with both CommonJS and ESM builds:
+
+```typescript
+// ESM
+import { createScraper, openGraph } from 'web-meta-scraper';
+
+// CommonJS
+const { createScraper, openGraph } = require('web-meta-scraper');
+```
+
+## What's Included
+
+The package exports:
+
+| Export | Description |
+| --- | --- |
+| `createScraper` | Factory function to create a scraper instance |
+| `metaTags` | Plugin for standard HTML meta tags |
+| `openGraph` | Plugin for Open Graph protocol |
+| `twitter` | Plugin for Twitter Cards |
+| `jsonLd` | Plugin for JSON-LD structured data |
+| `Metadata` | TypeScript type for the full metadata structure |
+| `ScraperOptions` | TypeScript type for scraper options |

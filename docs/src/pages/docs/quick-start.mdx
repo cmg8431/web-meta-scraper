@@ -1,0 +1,75 @@
+# Quick Start
+
+## Basic Usage
+
+Create a scraper with the plugins you need, then pass a URL:
+
+```typescript
+import { createScraper, metaTags, openGraph, twitter, jsonLd } from 'web-meta-scraper';
+
+const scrape = createScraper([metaTags, openGraph, twitter, jsonLd]);
+const metadata = await scrape('https://example.com');
+
+console.log(metadata);
+// {
+//   title: "Example Domain",
+//   description: "This domain is for use in illustrative examples.",
+//   image: "https://example.com/og-image.png",
+//   url: "https://example.com",
+//   type: "website",
+//   siteName: "Example",
+//   favicon: "https://example.com/favicon.ico",
+//   ...
+// }
+```
+
+## Using Specific Plugins
+
+You don't have to use all plugins. Pick only what you need:
+
+```typescript
+import { createScraper, openGraph } from 'web-meta-scraper';
+
+// Only extract Open Graph metadata
+const scrape = createScraper([openGraph]);
+const metadata = await scrape('https://example.com');
+```
+
+## Parsing Raw HTML
+
+You can pass an HTML string directly instead of a URL:
+
+```typescript
+const html = `
+<html>
+  <head>
+    <title>My Page</title>
+    <meta property="og:title" content="My Page - OG" />
+    <meta property="og:description" content="A description from Open Graph" />
+    <meta property="og:image" content="https://example.com/image.png" />
+  </head>
+  <body></body>
+</html>
+`;
+
+const scrape = createScraper([metaTags, openGraph]);
+const metadata = await scrape(html);
+
+console.log(metadata.title);       // "My Page - OG" (OG has higher priority)
+console.log(metadata.description);  // "A description from Open Graph"
+console.log(metadata.image);        // "https://example.com/image.png"
+```
+
+## With Options
+
+Customize behavior with the options parameter:
+
+```typescript
+const metadata = await scrape('https://example.com', {
+  maxDescriptionLength: 100,  // Truncate long descriptions
+  secureImages: true,         // Force HTTPS on image URLs
+  timeout: 10000,             // 10 second timeout
+});
+```
+
+See [Options](/docs/options) for the full list of configuration options.

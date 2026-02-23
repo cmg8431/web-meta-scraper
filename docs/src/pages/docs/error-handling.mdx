@@ -1,0 +1,69 @@
+# Error Handling
+
+web-meta-scraper throws `ScraperError` when something goes wrong during fetching or parsing.
+
+## ScraperError
+
+`ScraperError` extends the native `Error` class with an additional `cause` property that contains the original error.
+
+```typescript
+import { createScraper, openGraph } from 'web-meta-scraper';
+
+const scrape = createScraper([openGraph]);
+
+try {
+  const metadata = await scrape('https://example.com');
+} catch (error) {
+  if (error.name === 'ScraperError') {
+    console.error(error.message); // Human-readable error message
+    console.error(error.cause);   // Original error object, if available
+  }
+}
+```
+
+## Error Scenarios
+
+| Scenario | Error Message |
+| --- | --- |
+| Request timeout | `Request timeout after {timeout}ms` |
+| HTTP error (4xx/5xx) | `Failed to fetch URL: {url}` |
+| Non-HTML response | `Failed to fetch URL: {url}` (cause: `Invalid content type: {type}`) |
+| Invalid URL format | `Only HTTP(S) protocols are supported` |
+| Parsing failure | `Failed to scrape metadata` |
+
+## Timeout
+
+Set a custom timeout to avoid long waits:
+
+```typescript
+const metadata = await scrape('https://slow-site.example.com', {
+  timeout: 5000, // 5 seconds
+});
+```
+
+If the request exceeds the timeout, the scraper aborts the request and throws:
+```
+ScraperError: Request timeout after 5000ms
+```
+
+## URL Validation
+
+When `validateUrls: true` (default), the scraper checks that the input is a valid HTTP or HTTPS URL before making a request:
+
+```typescript
+// This throws immediately — no network request is made
+await scrape('ftp://example.com');
+// ScraperError: Only HTTP(S) protocols are supported
+```
+
+To skip validation (e.g., when passing raw HTML):
+
+```typescript
+const metadata = await scrape(htmlString, {
+  validateUrls: false,
+});
+```
+
+## JSON-LD Parse Errors
+
+Invalid JSON in `<script type="application/ld+json">` tags is silently ignored — the plugin skips malformed entries instead of throwing. This is by design, since many websites have broken JSON-LD markup.

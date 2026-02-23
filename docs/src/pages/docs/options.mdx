@@ -1,0 +1,80 @@
+# Options
+
+Pass options as the second argument to the scraper function to customize its behavior.
+
+```typescript
+const scrape = createScraper([metaTags, openGraph]);
+
+const metadata = await scrape('https://example.com', {
+  maxDescriptionLength: 200,
+  secureImages: true,
+  timeout: 30000,
+});
+```
+
+## Reference
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `maxDescriptionLength` | `number` | `200` | Maximum character length for descriptions. Longer text is truncated with `...`. |
+| `secureImages` | `boolean` | `true` | Convert `http://` image URLs to `https://`. |
+| `timeout` | `number` | `30000` | Request timeout in milliseconds. |
+| `userAgent` | `string` | `'Mozilla/5.0 (compatible; MetaScraper/1.0;)'` | User-Agent header for HTTP requests. |
+| `followRedirects` | `boolean` | `true` | Follow HTTP redirects. |
+| `validateUrls` | `boolean` | `true` | Validate that the input is a valid HTTP(S) URL before fetching. |
+| `extractRaw` | `boolean` | `false` | Include raw, unprocessed metadata in the result. |
+| `omitEmpty` | `boolean` | `true` | Remove `null`, `undefined`, and empty string values from the result. |
+| `fallbacks` | `boolean` | `true` | Apply fallback logic for missing fields (see below). |
+
+## Description Truncation
+
+When `maxDescriptionLength` is set, descriptions longer than the limit are truncated with an ellipsis:
+
+```typescript
+const metadata = await scrape(url, {
+  maxDescriptionLength: 100,
+});
+
+// "This is a very long description that goes on and on..."
+// → "This is a very long description that goes on and on..."  (truncated at 100 chars)
+```
+
+## Secure Images
+
+When `secureImages` is enabled (default), image URLs using `http://` are automatically upgraded to `https://`:
+
+```typescript
+// Input:  http://example.com/image.jpg
+// Output: https://example.com/image.jpg
+```
+
+## Fallback Behavior
+
+When `fallbacks: true` (default), the scraper applies the following fallback logic:
+
+1. **Title fallback** — If no `title` is found, `siteName` is used instead.
+2. **Description fallback** — If no `description` is found, it's extracted from JSON-LD structured data.
+3. **URL resolution** — Relative image and favicon paths are converted to absolute URLs using the page URL.
+
+```typescript
+// Disable fallbacks if you want raw extraction results
+const metadata = await scrape(url, {
+  fallbacks: false,
+});
+```
+
+## Empty Value Removal
+
+When `omitEmpty: true` (default), the result object is cleaned up:
+
+- `null` and `undefined` values are removed
+- Empty strings (`""`) are removed
+- Empty arrays (`[]`) are removed
+- Empty nested objects (`{}`) are removed
+
+```typescript
+// Disable to keep all fields, even empty ones
+const metadata = await scrape(url, {
+  omitEmpty: false,
+});
+```

@@ -1,0 +1,114 @@
+# Custom Plugins
+
+You can create custom plugins to extract any data from the HTML. A plugin is a function that receives the raw HTML string and options, and returns an object.
+
+## Plugin Interface
+
+```typescript
+type Plugin = (html: string, options: ScraperOptions) => Partial<Metadata> | Promise<Partial<Metadata>>;
+```
+
+- **`html`** — The raw HTML string of the page
+- **`options`** — The scraper options passed by the user
+- Returns a partial `Metadata` object (sync or async)
+
+## Basic Example
+
+```typescript
+import { createScraper, openGraph } from 'web-meta-scraper';
+import type { Plugin } from 'web-meta-scraper';
+
+const pricePlugin: Plugin = (html) => {
+  const match = html.match(/class="price"[^>]*>([^<]+)</);
+  const price = match ? match[1].trim() : undefined;
+
+  return { price } as any;
+};
+
+const scrape = createScraper([openGraph, pricePlugin]);
+const metadata = await scrape('https://shop.example.com');
+
+console.log(metadata.price); // "$99.99"
+```
+
+## Using Cheerio
+
+Since web-meta-scraper uses [Cheerio](https://cheerio.js.org/) internally, you can use it in your plugins too:
+
+```typescript
+import * as cheerio from 'cheerio';
+import type { Plugin } from 'web-meta-scraper';
+
+const recipePlugin: Plugin = (html) => {
+  const $ = cheerio.load(html);
+
+  const ingredients = $('[itemprop="recipeIngredient"]')
+    .map((_, el) => $(el).text().trim())
+    .get();
+
+  const cookTime = $('[itemprop="cookTime"]').attr('content');
+
+  return { ingredients, cookTime } as any;
+};
+```
+
+## How Custom Fields Are Merged
+
+Fields returned by custom plugins are added directly to the result object, as long as the key is **not** one of the reserved keys (`base`, `openGraph`, `twitter`, `jsonLd`).
+
+```typescript
+const myPlugin: Plugin = (html) => {
+  return {
+    // These are added directly to the result:
+    price: '$99.99',
+    rating: 4.5,
+
+    // These are merged with built-in plugin results:
+    // openGraph: { ... }  ← merged with openGraph plugin
+  };
+};
+```
+
+## Async Plugins
+
+Plugins can be async. All plugins run in parallel via `Promise.all`:
+
+```typescript
+const apiPlugin: Plugin = async (html, options) => {
+  const $ = cheerio.load(html);
+  const pageId = $('meta[name="page-id"]').attr('content');
+
+  if (!pageId) return {};
+
+  const res = await fetch(`https://api.example.com/pages/${pageId}`);
+  const data = await res.json();
+
+  return { pageViews: data.views, lastUpdated: data.updatedAt } as any;
+};
+```
+
+## Combining with Built-in Plugins
+
+Custom plugins work alongside built-in plugins:
+
+```typescript
+const scrape = createScraper([
+  metaTags,      // Standard meta tags
+  openGraph,     // Open Graph
+  twitter,       // Twitter Cards
+  jsonLd,        // JSON-LD
+  pricePlugin,   // Your custom plugin
+  recipePlugin,  // Another custom plugin
+]);
+
+const metadata = await scrape('https://recipe-shop.example.com');
+// {
+//   title: "Chocolate Cake",
+//   description: "A delicious recipe...",
+//   image: "https://...",
+//   price: "$12.99",
+//   ingredients: ["flour", "sugar", "cocoa"],
+//   cookTime: "PT45M",
+//   ...
+// }
+```

@@ -1,1 +1,48 @@
-# 소개
+# Introduction
+
+**web-meta-scraper** is a TypeScript library that extracts metadata from web pages. It uses a plugin architecture so you only include the parsers you need.
+
+## Why web-meta-scraper?
+
+- **Plugin-based** — Combine only the extractors you need: Open Graph, Twitter Cards, JSON-LD, meta tags, or your own custom plugins.
+- **Flat output** — Results are merged into a single flat object using priority-based logic. No need to manually check multiple sources.
+- **Works everywhere** — Supports Node.js, Bun, and browser environments. Compatible with npm, yarn, pnpm, and bun.
+- **TypeScript first** — Full type definitions included.
+
+## How It Works
+
+1. You create a scraper by passing an array of plugins to `createScraper()`.
+2. The scraper fetches the HTML from a URL (or accepts raw HTML).
+3. Each plugin parses the HTML and extracts its metadata.
+4. Results are merged by priority — for example, `og:title` takes precedence over `<title>`.
+5. You get a single, clean object with all the metadata.
+
+```typescript
+import { createScraper, metaTags, openGraph } from 'web-meta-scraper';
+
+const scrape = createScraper([metaTags, openGraph]);
+const result = await scrape('https://example.com');
+
+console.log(result.title);       // Best title from available sources
+console.log(result.description);  // Best description
+console.log(result.image);        // Best image URL
+```
+
+## Priority Merging
+
+When the same field exists in multiple sources, the highest-priority value wins:
+
+| Field         | Priority (high → low)           |
+| ------------- | ------------------------------- |
+| `title`       | Open Graph → Meta Tags → Twitter |
+| `description` | Open Graph → Meta Tags → Twitter |
+| `image`       | Open Graph → Twitter             |
+| `url`         | Open Graph → Meta Tags           |
+
+Fields unique to a specific source (like `twitterCard`, `siteName`, `structuredData`) are always included directly.
+
+## Next Steps
+
+- [Installation](/docs/installation) — Add web-meta-scraper to your project
+- [Quick Start](/docs/quick-start) — See it in action
+- [Plugins](/docs/plugins) — Learn about built-in plugins
