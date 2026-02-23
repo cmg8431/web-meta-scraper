@@ -1,5 +1,12 @@
 # docs
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [1b9f436]
+  - web-meta-scraper@1.2.0
+
 ## 0.1.1
 
 ### Patch Changes
