@@ -1,11 +1,13 @@
 # Plugins
 
-web-meta-scraper uses a plugin architecture. Each plugin extracts metadata from a specific source in the HTML. You combine plugins to build the scraper you need.
+web-meta-scraper uses a plugin architecture. Each plugin extracts metadata from a specific source in the HTML.
 
 ```typescript
-import { createScraper, metaTags, openGraph, twitter, jsonLd } from 'web-meta-scraper';
+import { createScraper, metaTags, openGraph, twitter, jsonLd, oembed } from 'web-meta-scraper';
 
-const scrape = createScraper([metaTags, openGraph, twitter, jsonLd]);
+const scraper = createScraper({
+  plugins: [metaTags, openGraph, twitter, jsonLd, oembed],
+});
 ```
 
 ## Meta Tags
@@ -15,7 +17,7 @@ Extracts metadata from standard HTML `<meta>` tags and other head elements.
 ```typescript
 import { createScraper, metaTags } from 'web-meta-scraper';
 
-const scrape = createScraper([metaTags]);
+const scraper = createScraper({ plugins: [metaTags] });
 ```
 
 **Extracted fields:**
@@ -36,7 +38,7 @@ Extracts [Open Graph](https://ogp.me/) protocol metadata from `og:` meta tags.
 ```typescript
 import { createScraper, openGraph } from 'web-meta-scraper';
 
-const scrape = createScraper([openGraph]);
+const scraper = createScraper({ plugins: [openGraph] });
 ```
 
 **Extracted fields:**
@@ -58,7 +60,7 @@ Extracts [Twitter Cards](https://developer.x.com/en/docs/twitter-for-websites/ca
 ```typescript
 import { createScraper, twitter } from 'web-meta-scraper';
 
-const scrape = createScraper([twitter]);
+const scraper = createScraper({ plugins: [twitter] });
 ```
 
 **Extracted fields:**
@@ -79,39 +81,61 @@ Extracts [JSON-LD](https://json-ld.org/) structured data from `<script type="app
 ```typescript
 import { createScraper, jsonLd } from 'web-meta-scraper';
 
-const scrape = createScraper([jsonLd]);
+const scraper = createScraper({ plugins: [jsonLd] });
 ```
 
-Parsed data is available as `structuredData` in the result. Supports Schema.org types including:
+Parsed data is available as `jsonLd` in `result.metadata`. Supports Schema.org types including:
 
-- `Article`
-- `Product`
-- `Organization`
-- `Person`
-- `WebSite`
-- `FAQPage`
-- `BreadcrumbList`
+- `Article`, `Product`, `Organization`, `Person`
+- `WebSite`, `FAQPage`, `BreadcrumbList`
 
-The plugin also handles `@graph` notation (multiple structured data items in a single script tag).
+Handles `@graph` notation and arrays. Invalid JSON is silently skipped.
 
 ```typescript
-const metadata = await scrape('https://example.com');
+const result = await scraper.scrapeUrl('https://example.com');
 
-// structuredData is an array of JSON-LD objects
-for (const item of metadata.structuredData) {
-  console.log(item['@type']); // e.g. "Article", "Organization"
+for (const item of result.metadata.jsonLd ?? []) {
+  console.log(item['@type']); // "Article", "Organization", etc.
 }
+```
+
+## oEmbed
+
+Discovers and fetches [oEmbed](https://oembed.com/) data from `<link type="application/json+oembed">` tags.
+
+```typescript
+import { createScraper, oembed } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [oembed] });
+```
+
+This plugin is async — it makes an additional HTTP request to the oEmbed endpoint. Returns data like:
+
+| Field | Description |
+| --- | --- |
+| `type` | Resource type (`photo`, `video`, `link`, `rich`) |
+| `title` | Resource title |
+| `author_name` | Author name |
+| `author_url` | Author URL |
+| `provider_name` | Provider name |
+| `provider_url` | Provider URL |
+| `thumbnail_url` | Thumbnail image URL |
+| `html` | Embed HTML (for `video`/`rich` types) |
+
+```typescript
+const result = await scraper.scrapeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+console.log(result.metadata.oembed);
+// { type: "video", title: "...", author_name: "...", html: "<iframe ...>" }
 ```
 
 ## Combining Plugins
 
-Plugins run in parallel and their results are merged by priority. The order in the array does not affect priority — it's determined by the [built-in priority rules](/docs/introduction#priority-merging).
+Plugins run in parallel via `Promise.all`. The order in the array does not affect priority — that's determined by the [resolve rules](/docs/options#custom-resolve-rules).
 
 ```typescript
-// All of these produce the same result:
-createScraper([metaTags, openGraph, twitter]);
-createScraper([twitter, openGraph, metaTags]);
-createScraper([openGraph, twitter, metaTags]);
+// All produce the same merged result:
+createScraper({ plugins: [metaTags, openGraph, twitter] });
+createScraper({ plugins: [twitter, openGraph, metaTags] });
 ```
 
-To learn how to create your own plugins, see [Custom Plugins](/docs/custom-plugins).
+To create your own plugins, see [Custom Plugins](/docs/custom-plugins).

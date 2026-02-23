@@ -4,9 +4,16 @@ import { ListColumn } from '@/components/main/ListColumn';
 
 # web-meta-scraper
 
-<p className="mt-4 text-xl text-gray-600 dark:text-gray-400">
-  A lightweight, plugin-based TypeScript library for extracting web page metadata.
-</p>
+<div className="mt-4 text-xl text-gray-600 dark:text-gray-400">
+A lightweight, plugin-based TypeScript library for extracting web page metadata.
+</div>
+
+<div className="mt-6 flex flex-wrap justify-center gap-2">
+  <img src="https://img.shields.io/npm/v/web-meta-scraper" alt="npm version" />
+  <img src="https://img.shields.io/npm/dm/web-meta-scraper" alt="npm downloads" />
+  <img src="https://img.shields.io/bundlephobia/minzip/web-meta-scraper" alt="bundle size" />
+  <img src="https://img.shields.io/github/stars/cmg8431/web-meta-scraper" alt="GitHub stars" />
+</div>
 
 <div className="mt-8 flex gap-3">
   <a href="/docs/introduction" className="rounded-lg bg-black px-6 py-3 text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 no-underline">
@@ -19,28 +26,31 @@ import { ListColumn } from '@/components/main/ListColumn';
 
 <div className="mt-16 grid w-full grid-cols-1 gap-8 md:grid-cols-3">
   <ListColumn
-    title="Plugin-Based"
-    description="Pick only the metadata extractors you need. Supports Open Graph, Twitter Cards, JSON-LD, and meta tags."
+    title="Single Dependency"
+    description="Only cheerio for HTML parsing. Uses native fetch() for HTTP requests. No bloat."
   />
   <ListColumn
-    title="TypeScript First"
-    description="Full type safety out of the box. Built with TypeScript, for TypeScript."
+    title="Plugin Architecture"
+    description="Pick only what you need: Open Graph, Twitter Cards, JSON-LD, oEmbed, meta tags, or your own."
   />
   <ListColumn
     title="Smart Merging"
-    description="Automatic priority-based merging across multiple metadata sources into a single flat object."
+    description="Priority-based resolver merges metadata from all sources into a single clean object."
   />
 </div>
 
 <div className="mt-12 w-full text-left">
 
 ```typescript
-import { createScraper, metaTags, openGraph, twitter, jsonLd } from 'web-meta-scraper';
+import { scrape } from 'web-meta-scraper';
 
-const scrape = createScraper([metaTags, openGraph, twitter, jsonLd]);
-const metadata = await scrape('https://example.com');
+const result = await scrape('https://example.com');
 
+console.log(result.metadata);
 // { title, description, image, url, type, siteName, ... }
+
+console.log(result.sources);
+// { "open-graph": { ... }, "meta-tags": { ... }, "twitter": { ... } }
 ```
 
 </div>

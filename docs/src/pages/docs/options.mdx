@@ -1,80 +1,136 @@
 # Options
 
-Pass options as the second argument to the scraper function to customize its behavior.
+`createScraper()` accepts a `ScraperConfig` object to configure plugins, resolve rules, fetch behavior, and post-processing.
 
 ```typescript
-const scrape = createScraper([metaTags, openGraph]);
+import { createScraper, metaTags, openGraph, twitter, jsonLd, oembed, DEFAULT_RULES } from 'web-meta-scraper';
 
-const metadata = await scrape('https://example.com', {
-  maxDescriptionLength: 200,
-  secureImages: true,
-  timeout: 30000,
+const scraper = createScraper({
+  plugins: [metaTags, openGraph, twitter, jsonLd, oembed],
+  rules: DEFAULT_RULES,
+  fetch: { /* ... */ },
+  postProcess: { /* ... */ },
 });
 ```
 
-## Reference
+## `ScraperConfig`
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `plugins` | `Plugin[]` | Array of plugins to use (default: `[]` for `createScraper`, all built-ins for `scrape()`) |
+| `rules` | `ResolveRule[]` | Priority resolve rules (default: `DEFAULT_RULES`) |
+| `fetch` | `FetchOptions` | HTTP fetch options (for `scrapeUrl`) |
+| `postProcess` | `PostProcessOptions` | Post-processing behavior |
+
+## Fetch Options
+
+Options for `scrapeUrl()` HTTP requests:
 
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
-| `maxDescriptionLength` | `number` | `200` | Maximum character length for descriptions. Longer text is truncated with `...`. |
-| `secureImages` | `boolean` | `true` | Convert `http://` image URLs to `https://`. |
-| `timeout` | `number` | `30000` | Request timeout in milliseconds. |
-| `userAgent` | `string` | `'Mozilla/5.0 (compatible; MetaScraper/1.0;)'` | User-Agent header for HTTP requests. |
-| `followRedirects` | `boolean` | `true` | Follow HTTP redirects. |
-| `validateUrls` | `boolean` | `true` | Validate that the input is a valid HTTP(S) URL before fetching. |
-| `extractRaw` | `boolean` | `false` | Include raw, unprocessed metadata in the result. |
-| `omitEmpty` | `boolean` | `true` | Remove `null`, `undefined`, and empty string values from the result. |
-| `fallbacks` | `boolean` | `true` | Apply fallback logic for missing fields (see below). |
-
-## Description Truncation
-
-When `maxDescriptionLength` is set, descriptions longer than the limit are truncated with an ellipsis:
+| `timeout` | `number` | `30000` | Request timeout in milliseconds |
+| `userAgent` | `string` | `'Mozilla/5.0 (compatible; WebMetaScraper/2.0;)'` | User-Agent header |
+| `followRedirects` | `boolean` | `true` | Follow HTTP redirects |
+| `maxContentLength` | `number` | `5242880` | Max response size in bytes (5MB) |
 
 ```typescript
-const metadata = await scrape(url, {
-  maxDescriptionLength: 100,
+const scraper = createScraper({
+  plugins: [openGraph],
+  fetch: {
+    timeout: 10000,
+    userAgent: 'MyBot/1.0',
+    maxContentLength: 1024 * 1024, // 1MB
+  },
 });
-
-// "This is a very long description that goes on and on..."
-// → "This is a very long description that goes on and on..."  (truncated at 100 chars)
 ```
 
-## Secure Images
+## Post-Processing Options
 
-When `secureImages` is enabled (default), image URLs using `http://` are automatically upgraded to `https://`:
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `maxDescriptionLength` | `number` | `200` | Maximum character length for descriptions. Truncated with `...`. |
+| `secureImages` | `boolean` | `true` | Convert `http://` and `//` image/favicon URLs to `https://`. |
+| `omitEmpty` | `boolean` | `true` | Remove `null`, `undefined`, empty strings, and empty arrays from the result. |
+| `fallbacks` | `boolean` | `true` | Apply fallback logic for missing fields. |
 
 ```typescript
-// Input:  http://example.com/image.jpg
-// Output: https://example.com/image.jpg
+const scraper = createScraper({
+  plugins: [metaTags, openGraph],
+  postProcess: {
+    maxDescriptionLength: 100,
+    secureImages: true,
+    omitEmpty: true,
+    fallbacks: true,
+  },
+});
 ```
 
-## Fallback Behavior
+### Fallback Behavior
 
-When `fallbacks: true` (default), the scraper applies the following fallback logic:
-
+When `fallbacks: true` (default):
 1. **Title fallback** — If no `title` is found, `siteName` is used instead.
 2. **Description fallback** — If no `description` is found, it's extracted from JSON-LD structured data.
-3. **URL resolution** — Relative image and favicon paths are converted to absolute URLs using the page URL.
+3. **URL resolution** — Relative image and favicon paths (`/image.png`) are converted to absolute URLs using the page URL.
+
+### Secure Images
+
+When `secureImages: true` (default):
+- `http://example.com/img.png` → `https://example.com/img.png`
+- `//example.com/img.png` → `https://example.com/img.png`
+
+## Custom Resolve Rules
+
+The default rules determine how metadata from different plugins is merged. You can override them entirely:
 
 ```typescript
-// Disable fallbacks if you want raw extraction results
-const metadata = await scrape(url, {
-  fallbacks: false,
+import { createScraper, metaTags, openGraph, twitter, type ResolveRule } from 'web-meta-scraper';
+
+const myRules: ResolveRule[] = [
+  {
+    field: 'title',
+    sources: [
+      { plugin: 'twitter', key: 'title', priority: 3 },   // Twitter wins
+      { plugin: 'open-graph', key: 'title', priority: 2 },
+      { plugin: 'meta-tags', key: 'title', priority: 1 },
+    ],
+  },
+  {
+    field: 'description',
+    sources: [
+      { plugin: 'open-graph', key: 'description', priority: 2 },
+      { plugin: 'meta-tags', key: 'description', priority: 1 },
+    ],
+  },
+  // Add your own fields...
+];
+
+const scraper = createScraper({
+  plugins: [metaTags, openGraph, twitter],
+  rules: myRules,
 });
 ```
 
-## Empty Value Removal
+Each `ResolveRule` maps a final `field` name to an array of `sources`. Each source specifies:
+- `plugin` — The plugin name (matches `PluginResult.name`)
+- `key` — The key in the plugin's `data` object
+- `priority` — Higher number wins
 
-When `omitEmpty: true` (default), the result object is cleaned up:
+### Default Rules
 
-- `null` and `undefined` values are removed
-- Empty strings (`""`) are removed
-- Empty arrays (`[]`) are removed
-- Empty nested objects (`{}`) are removed
-
-```typescript
-// Disable to keep all fields, even empty ones
-const metadata = await scrape(url, {
-  omitEmpty: false,
-});
-```
+| Resolved Field | Sources (by priority) |
+| --- | --- |
+| `title` | open-graph (3) → meta-tags (2) → twitter (1) |
+| `description` | open-graph (3) → meta-tags (2) → twitter (1) |
+| `image` | open-graph (2) → twitter (1) |
+| `url` | open-graph (2) → meta-tags/canonicalUrl (1) |
+| `favicon` | meta-tags (1) |
+| `author` | meta-tags (1) |
+| `keywords` | meta-tags (1) |
+| `type` | open-graph (1) |
+| `siteName` | open-graph (1) |
+| `locale` | open-graph (1) |
+| `twitterCard` | twitter/card (1) |
+| `twitterSite` | twitter/site (1) |
+| `twitterCreator` | twitter/creator (1) |
+| `jsonLd` | json-ld (1) |
+| `oembed` | oembed (1) |

@@ -1,70 +1,74 @@
 # Custom Plugins
 
-You can create custom plugins to extract any data from the HTML. A plugin is a function that receives the raw HTML string and options, and returns an object.
+Create your own plugins to extract any data from the HTML.
 
 ## Plugin Interface
 
 ```typescript
-type Plugin = (html: string, options: ScraperOptions) => Partial<Metadata> | Promise<Partial<Metadata>>;
-```
+type Plugin = (ctx: ScrapeContext) => PluginResult | Promise<PluginResult>;
 
-- **`html`** — The raw HTML string of the page
-- **`options`** — The scraper options passed by the user
-- Returns a partial `Metadata` object (sync or async)
+interface ScrapeContext {
+  $: CheerioAPI;        // Cheerio instance for DOM queries
+  url?: string;         // Page URL (if available)
+  options: ScraperOptions;
+}
+
+interface PluginResult {
+  name: string;                    // Unique plugin name
+  data: Record<string, unknown>;   // Extracted data
+}
+```
 
 ## Basic Example
 
 ```typescript
-import { createScraper, openGraph } from 'web-meta-scraper';
-import type { Plugin } from 'web-meta-scraper';
+import { createScraper, openGraph, DEFAULT_RULES, type Plugin } from 'web-meta-scraper';
 
-const pricePlugin: Plugin = (html) => {
-  const match = html.match(/class="price"[^>]*>([^<]+)</);
-  const price = match ? match[1].trim() : undefined;
+const pricePlugin: Plugin = (ctx) => {
+  const { $ } = ctx;
 
-  return { price } as any;
-};
+  const price = $('[itemprop="price"]').attr('content');
+  const currency = $('[itemprop="priceCurrency"]').attr('content');
 
-const scrape = createScraper([openGraph, pricePlugin]);
-const metadata = await scrape('https://shop.example.com');
-
-console.log(metadata.price); // "$99.99"
-```
-
-## Using Cheerio
-
-Since web-meta-scraper uses [Cheerio](https://cheerio.js.org/) internally, you can use it in your plugins too:
-
-```typescript
-import * as cheerio from 'cheerio';
-import type { Plugin } from 'web-meta-scraper';
-
-const recipePlugin: Plugin = (html) => {
-  const $ = cheerio.load(html);
-
-  const ingredients = $('[itemprop="recipeIngredient"]')
-    .map((_, el) => $(el).text().trim())
-    .get();
-
-  const cookTime = $('[itemprop="cookTime"]').attr('content');
-
-  return { ingredients, cookTime } as any;
-};
-```
-
-## How Custom Fields Are Merged
-
-Fields returned by custom plugins are added directly to the result object, as long as the key is **not** one of the reserved keys (`base`, `openGraph`, `twitter`, `jsonLd`).
-
-```typescript
-const myPlugin: Plugin = (html) => {
   return {
-    // These are added directly to the result:
-    price: '$99.99',
-    rating: 4.5,
+    name: 'price',
+    data: { price, currency },
+  };
+};
 
-    // These are merged with built-in plugin results:
-    // openGraph: { ... }  ← merged with openGraph plugin
+const scraper = createScraper({
+  plugins: [openGraph, pricePlugin],
+  rules: [
+    ...DEFAULT_RULES,
+    { field: 'price', sources: [{ plugin: 'price', key: 'price', priority: 1 }] },
+    { field: 'currency', sources: [{ plugin: 'price', key: 'currency', priority: 1 }] },
+  ],
+});
+
+const result = await scraper.scrapeUrl('https://shop.example.com');
+console.log(result.metadata); // { title: "...", price: "$99.99", currency: "USD", ... }
+```
+
+## Using the Context
+
+The `ScrapeContext` gives you:
+
+- **`$`** — A [Cheerio](https://cheerio.js.org/) instance preloaded with the page HTML. Use it like jQuery.
+- **`url`** — The page URL (set for `scrapeUrl`, or passed as option to `scrape`). Useful for resolving relative URLs.
+- **`options`** — Scraper options including `timeout`.
+
+```typescript
+import { resolveUrl } from 'web-meta-scraper'; // URL utility
+
+const imagePlugin: Plugin = (ctx) => {
+  const { $, url } = ctx;
+
+  const src = $('img.hero').attr('src');
+  const absoluteSrc = src ? resolveUrl(src, url) : undefined;
+
+  return {
+    name: 'hero-image',
+    data: { heroImage: absoluteSrc },
   };
 };
 ```
@@ -74,41 +78,66 @@ const myPlugin: Plugin = (html) => {
 Plugins can be async. All plugins run in parallel via `Promise.all`:
 
 ```typescript
-const apiPlugin: Plugin = async (html, options) => {
-  const $ = cheerio.load(html);
+const apiPlugin: Plugin = async (ctx) => {
+  const { $, options } = ctx;
   const pageId = $('meta[name="page-id"]').attr('content');
 
-  if (!pageId) return {};
+  if (!pageId) return { name: 'api', data: {} };
 
-  const res = await fetch(`https://api.example.com/pages/${pageId}`);
-  const data = await res.json();
+  const res = await fetch(`https://api.example.com/pages/${pageId}`, {
+    signal: AbortSignal.timeout(options.timeout ?? 5000),
+  });
+  const json = await res.json();
 
-  return { pageViews: data.views, lastUpdated: data.updatedAt } as any;
+  return {
+    name: 'api',
+    data: { pageViews: json.views, lastUpdated: json.updatedAt },
+  };
 };
 ```
 
-## Combining with Built-in Plugins
+## Registering Custom Fields
 
-Custom plugins work alongside built-in plugins:
+For your plugin's data to appear in `result.metadata`, you need to add corresponding resolve rules:
 
 ```typescript
-const scrape = createScraper([
-  metaTags,      // Standard meta tags
-  openGraph,     // Open Graph
-  twitter,       // Twitter Cards
-  jsonLd,        // JSON-LD
-  pricePlugin,   // Your custom plugin
-  recipePlugin,  // Another custom plugin
-]);
+const scraper = createScraper({
+  plugins: [metaTags, openGraph, pricePlugin],
+  rules: [
+    ...DEFAULT_RULES,
+    // Map plugin data to result fields
+    { field: 'price', sources: [{ plugin: 'price', key: 'price', priority: 1 }] },
+    { field: 'currency', sources: [{ plugin: 'price', key: 'currency', priority: 1 }] },
+  ],
+});
+```
 
-const metadata = await scrape('https://recipe-shop.example.com');
-// {
-//   title: "Chocolate Cake",
-//   description: "A delicious recipe...",
-//   image: "https://...",
-//   price: "$12.99",
-//   ingredients: ["flour", "sugar", "cocoa"],
-//   cookTime: "PT45M",
-//   ...
-// }
+Without rules, your plugin's data is still available in `result.sources`:
+
+```typescript
+const result = await scraper.scrapeUrl('https://shop.example.com');
+result.sources['price']; // { price: "$99.99", currency: "USD" }
+```
+
+## Testing Plugins
+
+Use `createContext` to test your plugins without making HTTP requests:
+
+```typescript
+import { createContext } from 'web-meta-scraper';
+
+const html = `
+<html>
+  <head>
+    <meta itemprop="price" content="29.99" />
+    <meta itemprop="priceCurrency" content="USD" />
+  </head>
+</html>
+`;
+
+const ctx = createContext(html, 'https://example.com', {});
+const result = pricePlugin(ctx);
+
+console.log(result);
+// { name: 'price', data: { price: '29.99', currency: 'USD' } }
 ```

@@ -1,16 +1,19 @@
 # Quick Start
 
-## Basic Usage
+## The Simple Way — `scrape()`
 
-Create a scraper with the plugins you need, then pass a URL:
+The `scrape()` function auto-detects URL vs HTML and uses all built-in plugins:
 
 ```typescript
-import { createScraper, metaTags, openGraph, twitter, jsonLd } from 'web-meta-scraper';
+import { scrape } from 'web-meta-scraper';
 
-const scrape = createScraper([metaTags, openGraph, twitter, jsonLd]);
-const metadata = await scrape('https://example.com');
+// From URL — fetches and parses automatically
+const result = await scrape('https://example.com');
 
-console.log(metadata);
+// From HTML string
+const result = await scrape('<html><head><title>Hello</title></head></html>');
+
+console.log(result.metadata);
 // {
 //   title: "Example Domain",
 //   description: "This domain is for use in illustrative examples.",
@@ -23,21 +26,39 @@ console.log(metadata);
 // }
 ```
 
-## Using Specific Plugins
+## The Full Way — `createScraper()`
 
-You don't have to use all plugins. Pick only what you need:
+Use `createScraper()` when you need control over which plugins to use, fetch behavior, or post-processing:
 
 ```typescript
-import { createScraper, openGraph } from 'web-meta-scraper';
+import { createScraper, metaTags, openGraph, twitter } from 'web-meta-scraper';
 
-// Only extract Open Graph metadata
-const scrape = createScraper([openGraph]);
-const metadata = await scrape('https://example.com');
+const scraper = createScraper({
+  plugins: [metaTags, openGraph, twitter],
+  fetch: {
+    timeout: 10000,
+    userAgent: 'MyBot/1.0',
+  },
+  postProcess: {
+    maxDescriptionLength: 100,
+    secureImages: true,
+  },
+});
 ```
 
-## Parsing Raw HTML
+The scraper object has two methods:
 
-You can pass an HTML string directly instead of a URL:
+### `scraper.scrapeUrl(url)`
+
+Fetches the page and extracts metadata:
+
+```typescript
+const result = await scraper.scrapeUrl('https://example.com');
+```
+
+### `scraper.scrape(html, options?)`
+
+Parses raw HTML. Optionally pass a `url` for resolving relative paths:
 
 ```typescript
 const html = `
@@ -46,30 +67,40 @@ const html = `
     <title>My Page</title>
     <meta property="og:title" content="My Page - OG" />
     <meta property="og:description" content="A description from Open Graph" />
-    <meta property="og:image" content="https://example.com/image.png" />
+    <link rel="icon" href="/favicon.ico" />
   </head>
-  <body></body>
 </html>
 `;
 
-const scrape = createScraper([metaTags, openGraph]);
-const metadata = await scrape(html);
+const result = await scraper.scrape(html, { url: 'https://example.com' });
 
-console.log(metadata.title);       // "My Page - OG" (OG has higher priority)
-console.log(metadata.description);  // "A description from Open Graph"
-console.log(metadata.image);        // "https://example.com/image.png"
+console.log(result.metadata.title);    // "My Page - OG" (OG has higher priority)
+console.log(result.metadata.favicon);  // "https://example.com/favicon.ico" (resolved)
 ```
 
-## With Options
+## Result Structure
 
-Customize behavior with the options parameter:
+Both methods return a `ScraperResult`:
 
 ```typescript
-const metadata = await scrape('https://example.com', {
-  maxDescriptionLength: 100,  // Truncate long descriptions
-  secureImages: true,         // Force HTTPS on image URLs
-  timeout: 10000,             // 10 second timeout
-});
+interface ScraperResult {
+  metadata: ResolvedMetadata;                    // Merged metadata
+  sources: Record<string, Record<string, unknown>>; // Raw plugin outputs
+}
 ```
 
-See [Options](/docs/options) for the full list of configuration options.
+The `sources` field gives you access to each plugin's raw output for debugging or custom logic:
+
+```typescript
+const result = await scrape('https://example.com');
+
+// Merged result
+result.metadata.title; // "Example" (from OG, highest priority)
+
+// Raw per-plugin data
+result.sources['open-graph'].title;  // "Example"
+result.sources['meta-tags'].title;   // "Example Domain"
+result.sources['twitter'].title;     // "Example | Twitter"
+```
+
+See [Options](/docs/options) for the full configuration reference.

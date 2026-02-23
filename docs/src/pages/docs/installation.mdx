@@ -1,10 +1,8 @@
 # Installation
 
-Install `web-meta-scraper` using your preferred package manager:
-
 import { Tabs, Tab } from 'nextra/components';
 
-<Tabs items={['npm', 'yarn', 'pnpm', 'bun']}>
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
   <Tab>
     ```bash
     npm install web-meta-scraper
@@ -12,12 +10,12 @@ import { Tabs, Tab } from 'nextra/components';
   </Tab>
   <Tab>
     ```bash
-    yarn add web-meta-scraper
+    pnpm add web-meta-scraper
     ```
   </Tab>
   <Tab>
     ```bash
-    pnpm add web-meta-scraper
+    yarn add web-meta-scraper
     ```
   </Tab>
   <Tab>
@@ -29,7 +27,7 @@ import { Tabs, Tab } from 'nextra/components';
 
 ## Requirements
 
-- **Node.js** 18 or later
+- **Node.js** 18 or later (for native `fetch()` support)
 - **TypeScript** 5.0+ (optional, but recommended)
 
 ## Module Formats
@@ -38,22 +36,40 @@ web-meta-scraper ships with both CommonJS and ESM builds:
 
 ```typescript
 // ESM
-import { createScraper, openGraph } from 'web-meta-scraper';
+import { scrape, createScraper } from 'web-meta-scraper';
 
 // CommonJS
-const { createScraper, openGraph } = require('web-meta-scraper');
+const { scrape, createScraper } = require('web-meta-scraper');
 ```
 
-## What's Included
-
-The package exports:
+## Exports
 
 | Export | Description |
 | --- | --- |
-| `createScraper` | Factory function to create a scraper instance |
+| `scrape` | Convenience function — auto-detects URL vs HTML, uses all built-in plugins |
+| `createScraper` | Factory function for full control over plugins, rules, and options |
+| `ScraperError` | Custom error class thrown on failures |
 | `metaTags` | Plugin for standard HTML meta tags |
 | `openGraph` | Plugin for Open Graph protocol |
 | `twitter` | Plugin for Twitter Cards |
 | `jsonLd` | Plugin for JSON-LD structured data |
-| `Metadata` | TypeScript type for the full metadata structure |
-| `ScraperOptions` | TypeScript type for scraper options |
+| `oembed` | Plugin for oEmbed discovery |
+| `DEFAULT_RULES` | Default priority resolve rules |
+| `createContext` | Helper to create a `ScrapeContext` for testing plugins |
+| `fetchHtml` | Standalone HTML fetcher function |
+
+### Type Exports
+
+| Type | Description |
+| --- | --- |
+| `ScraperConfig` | Configuration for `createScraper()` |
+| `ScraperResult` | Return type with `metadata` and `sources` |
+| `ResolvedMetadata` | Merged metadata output type |
+| `Plugin` | Plugin function type |
+| `PluginResult` | Plugin return type |
+| `ScrapeContext` | Context passed to plugins |
+| `ResolveRule` | Priority resolve rule type |
+| `FetchOptions` | Options for `fetchHtml` |
+| `ScraperOptions` | General scraper options |
+| `JsonLdMetadata` | JSON-LD data type |
+| `OEmbedData` | oEmbed data type |

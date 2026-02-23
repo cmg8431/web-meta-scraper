@@ -1,31 +1,40 @@
 # Introduction
 
-**web-meta-scraper** is a TypeScript library that extracts metadata from web pages. It uses a plugin architecture so you only include the parsers you need.
+**web-meta-scraper** is a TypeScript library that extracts metadata from web pages using a plugin-based architecture.
 
 ## Why web-meta-scraper?
 
-- **Plugin-based** — Combine only the extractors you need: Open Graph, Twitter Cards, JSON-LD, meta tags, or your own custom plugins.
-- **Flat output** — Results are merged into a single flat object using priority-based logic. No need to manually check multiple sources.
-- **Works everywhere** — Supports Node.js, Bun, and browser environments. Compatible with npm, yarn, pnpm, and bun.
-- **TypeScript first** — Full type definitions included.
+| | web-meta-scraper | metascraper | open-graph-scraper |
+|---|---|---|---|
+| **Dependencies** | 1 (`cheerio`) | 10+ | 4+ |
+| **Bundle size** | ~5KB min+gzip | ~50KB+ | ~15KB+ |
+| **Plugin system** | Composable plugins | Rule-based | Monolithic |
+| **Custom plugins** | Simple function | Complex rules | Not supported |
+| **TypeScript** | First-class | Partial | Partial |
+| **oEmbed** | Built-in plugin | Separate package | Not supported |
+| **Custom rules** | Configurable | Fixed | Fixed |
+| **HTTP client** | Native `fetch()` | `got` | `undici` |
 
 ## How It Works
 
-1. You create a scraper by passing an array of plugins to `createScraper()`.
-2. The scraper fetches the HTML from a URL (or accepts raw HTML).
-3. Each plugin parses the HTML and extracts its metadata.
-4. Results are merged by priority — for example, `og:title` takes precedence over `<title>`.
-5. You get a single, clean object with all the metadata.
+1. Create a scraper with `createScraper()` (or use the `scrape()` shorthand).
+2. The scraper fetches HTML from a URL or accepts raw HTML.
+3. Each plugin extracts metadata from the HTML via the `ScrapeContext`.
+4. The resolver merges results using priority rules — e.g., `og:title` wins over `<title>`.
+5. You get a `ScraperResult` with merged `metadata` and raw `sources`.
 
 ```typescript
-import { createScraper, metaTags, openGraph } from 'web-meta-scraper';
+import { scrape } from 'web-meta-scraper';
 
-const scrape = createScraper([metaTags, openGraph]);
 const result = await scrape('https://example.com');
 
-console.log(result.title);       // Best title from available sources
-console.log(result.description);  // Best description
-console.log(result.image);        // Best image URL
+console.log(result.metadata.title);       // Best title from available sources
+console.log(result.metadata.description);  // Best description
+console.log(result.metadata.image);        // Best image URL
+
+// See what each plugin extracted
+console.log(result.sources['open-graph']); // { title: "...", image: "..." }
+console.log(result.sources['meta-tags']);   // { title: "...", keywords: [...] }
 ```
 
 ## Priority Merging
@@ -37,9 +46,11 @@ When the same field exists in multiple sources, the highest-priority value wins:
 | `title`       | Open Graph → Meta Tags → Twitter |
 | `description` | Open Graph → Meta Tags → Twitter |
 | `image`       | Open Graph → Twitter             |
-| `url`         | Open Graph → Meta Tags           |
+| `url`         | Open Graph → Meta Tags (canonical) |
 
-Fields unique to a specific source (like `twitterCard`, `siteName`, `structuredData`) are always included directly.
+Source-specific fields (`twitterCard`, `siteName`, `locale`, `jsonLd`, `oembed`) are always included directly.
+
+You can customize these rules with the `rules` option in `createScraper()`.
 
 ## Next Steps
 

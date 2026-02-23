@@ -10,7 +10,7 @@ export function ListColumn({ title, description }: Props) {
       key={title}
     >
       <div className="text-xl font-bold">{title}</div>
-      <p className="text-lg">{description}</p>
+      <div className="text-lg">{description}</div>
     </div>
   );
 }

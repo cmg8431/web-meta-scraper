@@ -9,5 +9,9 @@
   "docs": {
     "type": "page",
     "title": "Docs"
+  },
+  "playground": {
+    "type": "page",
+    "title": "Playground"
   }
 }

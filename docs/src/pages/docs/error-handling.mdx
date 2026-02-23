@@ -4,19 +4,17 @@ web-meta-scraper throws `ScraperError` when something goes wrong during fetching
 
 ## ScraperError
 
-`ScraperError` extends the native `Error` class with an additional `cause` property that contains the original error.
+`ScraperError` extends the native `Error` class with an additional `cause` property containing the original error.
 
 ```typescript
-import { createScraper, openGraph } from 'web-meta-scraper';
-
-const scrape = createScraper([openGraph]);
+import { scrape, ScraperError } from 'web-meta-scraper';
 
 try {
-  const metadata = await scrape('https://example.com');
+  const result = await scrape('https://example.com');
 } catch (error) {
-  if (error.name === 'ScraperError') {
-    console.error(error.message); // Human-readable error message
-    console.error(error.cause);   // Original error object, if available
+  if (error instanceof ScraperError) {
+    console.error(error.message); // Human-readable message
+    console.error(error.cause);   // Original error, if available
   }
 }
 ```
@@ -28,7 +26,8 @@ try {
 | Request timeout | `Request timeout after {timeout}ms` |
 | HTTP error (4xx/5xx) | `Failed to fetch URL: {url}` |
 | Non-HTML response | `Failed to fetch URL: {url}` (cause: `Invalid content type: {type}`) |
-| Invalid URL format | `Only HTTP(S) protocols are supported` |
+| Response too large | `Failed to fetch URL: {url}` (cause: `Content too large: {bytes} bytes`) |
+| Invalid URL protocol | `Only HTTP(S) protocols are supported` |
 | Parsing failure | `Failed to scrape metadata` |
 
 ## Timeout
@@ -36,34 +35,47 @@ try {
 Set a custom timeout to avoid long waits:
 
 ```typescript
-const metadata = await scrape('https://slow-site.example.com', {
-  timeout: 5000, // 5 seconds
+import { createScraper, openGraph } from 'web-meta-scraper';
+
+const scraper = createScraper({
+  plugins: [openGraph],
+  fetch: { timeout: 5000 }, // 5 seconds
 });
+
+try {
+  await scraper.scrapeUrl('https://slow-site.example.com');
+} catch (error) {
+  // ScraperError: Request timeout after 5000ms
+}
 ```
 
-If the request exceeds the timeout, the scraper aborts the request and throws:
-```
-ScraperError: Request timeout after 5000ms
+## Content Size Limit
+
+Prevent downloading excessively large pages:
+
+```typescript
+const scraper = createScraper({
+  plugins: [openGraph],
+  fetch: { maxContentLength: 1024 * 1024 }, // 1MB
+});
 ```
 
 ## URL Validation
 
-When `validateUrls: true` (default), the scraper checks that the input is a valid HTTP or HTTPS URL before making a request:
+`scrapeUrl()` validates that the input is a valid HTTP or HTTPS URL:
 
 ```typescript
-// This throws immediately — no network request is made
-await scrape('ftp://example.com');
+// Throws immediately — no network request
+await scraper.scrapeUrl('ftp://example.com');
 // ScraperError: Only HTTP(S) protocols are supported
 ```
 
-To skip validation (e.g., when passing raw HTML):
-
-```typescript
-const metadata = await scrape(htmlString, {
-  validateUrls: false,
-});
-```
+For raw HTML, use `scraper.scrape()` which doesn't validate URLs.
 
 ## JSON-LD Parse Errors
 
-Invalid JSON in `<script type="application/ld+json">` tags is silently ignored — the plugin skips malformed entries instead of throwing. This is by design, since many websites have broken JSON-LD markup.
+Invalid JSON in `<script type="application/ld+json">` tags is silently skipped — the plugin ignores malformed entries instead of throwing. This is by design, since many websites have broken JSON-LD markup.
+
+## oEmbed Fetch Errors
+
+The oEmbed plugin silently returns empty data if the oEmbed endpoint is unreachable or returns an error. This prevents one failing endpoint from breaking the entire scrape.
