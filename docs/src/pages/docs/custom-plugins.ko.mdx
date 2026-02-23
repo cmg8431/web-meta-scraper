@@ -1,0 +1,143 @@
+# 커스텀 플러그인
+
+HTML에서 원하는 데이터를 추출하는 커스텀 플러그인을 만들 수 있습니다.
+
+## 플러그인 인터페이스
+
+```typescript
+type Plugin = (ctx: ScrapeContext) => PluginResult | Promise<PluginResult>;
+
+interface ScrapeContext {
+  $: CheerioAPI;        // DOM 쿼리를 위한 Cheerio 인스턴스
+  url?: string;         // 페이지 URL (있는 경우)
+  options: ScraperOptions;
+}
+
+interface PluginResult {
+  name: string;                    // 고유한 플러그인 이름
+  data: Record<string, unknown>;   // 추출된 데이터
+}
+```
+
+## 기본 예제
+
+```typescript
+import { createScraper, openGraph, DEFAULT_RULES, type Plugin } from 'web-meta-scraper';
+
+const pricePlugin: Plugin = (ctx) => {
+  const { $ } = ctx;
+
+  const price = $('[itemprop="price"]').attr('content');
+  const currency = $('[itemprop="priceCurrency"]').attr('content');
+
+  return {
+    name: 'price',
+    data: { price, currency },
+  };
+};
+
+const scraper = createScraper({
+  plugins: [openGraph, pricePlugin],
+  rules: [
+    ...DEFAULT_RULES,
+    { field: 'price', sources: [{ plugin: 'price', key: 'price', priority: 1 }] },
+    { field: 'currency', sources: [{ plugin: 'price', key: 'currency', priority: 1 }] },
+  ],
+});
+
+const result = await scraper.scrapeUrl('https://shop.example.com');
+console.log(result.metadata); // { title: "...", price: "$99.99", currency: "USD", ... }
+```
+
+## 컨텍스트 사용
+
+`ScrapeContext`는 다음을 제공합니다:
+
+- **`$`** — 페이지 HTML이 로드된 [Cheerio](https://cheerio.js.org/) 인스턴스. jQuery처럼 사용.
+- **`url`** — 페이지 URL (`scrapeUrl`에서 설정되거나, `scrape`에 옵션으로 전달). 상대 URL 해석에 유용.
+- **`options`** — `timeout` 등을 포함하는 스크래퍼 옵션.
+
+```typescript
+import { resolveUrl } from 'web-meta-scraper'; // URL 유틸리티
+
+const imagePlugin: Plugin = (ctx) => {
+  const { $, url } = ctx;
+
+  const src = $('img.hero').attr('src');
+  const absoluteSrc = src ? resolveUrl(src, url) : undefined;
+
+  return {
+    name: 'hero-image',
+    data: { heroImage: absoluteSrc },
+  };
+};
+```
+
+## 비동기 플러그인
+
+플러그인은 비동기일 수 있습니다. 모든 플러그인은 `Promise.all`로 병렬 실행됩니다:
+
+```typescript
+const apiPlugin: Plugin = async (ctx) => {
+  const { $, options } = ctx;
+  const pageId = $('meta[name="page-id"]').attr('content');
+
+  if (!pageId) return { name: 'api', data: {} };
+
+  const res = await fetch(`https://api.example.com/pages/${pageId}`, {
+    signal: AbortSignal.timeout(options.timeout ?? 5000),
+  });
+  const json = await res.json();
+
+  return {
+    name: 'api',
+    data: { pageViews: json.views, lastUpdated: json.updatedAt },
+  };
+};
+```
+
+## 커스텀 필드 등록
+
+플러그인 데이터를 `result.metadata`에 포함시키려면 리졸브 규칙을 추가해야 합니다:
+
+```typescript
+const scraper = createScraper({
+  plugins: [metaTags, openGraph, pricePlugin],
+  rules: [
+    ...DEFAULT_RULES,
+    // 플러그인 데이터를 결과 필드에 매핑
+    { field: 'price', sources: [{ plugin: 'price', key: 'price', priority: 1 }] },
+    { field: 'currency', sources: [{ plugin: 'price', key: 'currency', priority: 1 }] },
+  ],
+});
+```
+
+규칙 없이도 플러그인 데이터는 `result.sources`에서 접근 가능합니다:
+
+```typescript
+const result = await scraper.scrapeUrl('https://shop.example.com');
+result.sources['price']; // { price: "$99.99", currency: "USD" }
+```
+
+## 플러그인 테스트
+
+`createContext`를 사용하면 HTTP 요청 없이 플러그인을 테스트할 수 있습니다:
+
+```typescript
+import { createContext } from 'web-meta-scraper';
+
+const html = `
+<html>
+  <head>
+    <meta itemprop="price" content="29.99" />
+    <meta itemprop="priceCurrency" content="USD" />
+  </head>
+</html>
+`;
+
+const ctx = createContext(html, 'https://example.com', {});
+const result = pricePlugin(ctx);
+
+console.log(result);
+// { name: 'price', data: { price: '29.99', currency: 'USD' } }
+```

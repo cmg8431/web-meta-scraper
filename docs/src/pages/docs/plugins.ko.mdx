@@ -1,0 +1,141 @@
+# 플러그인
+
+web-meta-scraper는 플러그인 아키텍처를 사용합니다. 각 플러그인은 HTML에서 특정 소스의 메타데이터를 추출합니다.
+
+```typescript
+import { createScraper, metaTags, openGraph, twitter, jsonLd, oembed } from 'web-meta-scraper';
+
+const scraper = createScraper({
+  plugins: [metaTags, openGraph, twitter, jsonLd, oembed],
+});
+```
+
+## Meta Tags
+
+표준 HTML `<meta>` 태그와 기타 head 요소에서 메타데이터를 추출합니다.
+
+```typescript
+import { createScraper, metaTags } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [metaTags] });
+```
+
+**추출 필드:**
+
+| 필드 | 소스 |
+| --- | --- |
+| `title` | `<title>` 태그 |
+| `description` | `<meta name="description">` |
+| `keywords` | `<meta name="keywords">` (배열로 파싱) |
+| `author` | `<meta name="author">` |
+| `favicon` | `<link rel="icon">` 또는 `<link rel="shortcut icon">` |
+| `canonicalUrl` | `<link rel="canonical">` |
+
+## Open Graph
+
+`og:` 메타 태그에서 [Open Graph](https://ogp.me/) 프로토콜 메타데이터를 추출합니다.
+
+```typescript
+import { createScraper, openGraph } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [openGraph] });
+```
+
+**추출 필드:**
+
+| 필드 | 소스 |
+| --- | --- |
+| `title` | `og:title` |
+| `description` | `og:description` |
+| `image` | `og:image` |
+| `url` | `og:url` |
+| `type` | `og:type` (`website`, `article`, `profile`, `book`, `music`, `video`) |
+| `siteName` | `og:site_name` |
+| `locale` | `og:locale` |
+
+## Twitter Cards
+
+`twitter:` 메타 태그에서 [Twitter Cards](https://developer.x.com/en/docs/twitter-for-websites/cards) 메타데이터를 추출합니다.
+
+```typescript
+import { createScraper, twitter } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [twitter] });
+```
+
+**추출 필드:**
+
+| 필드 | 소스 |
+| --- | --- |
+| `title` | `twitter:title` |
+| `description` | `twitter:description` |
+| `image` | `twitter:image` |
+| `card` | `twitter:card` (`summary`, `summary_large_image`, `app`, `player`) |
+| `site` | `twitter:site` |
+| `creator` | `twitter:creator` |
+
+## JSON-LD
+
+`<script type="application/ld+json">` 태그에서 [JSON-LD](https://json-ld.org/) 구조화된 데이터를 추출합니다.
+
+```typescript
+import { createScraper, jsonLd } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [jsonLd] });
+```
+
+파싱된 데이터는 `result.metadata.jsonLd`에서 사용할 수 있습니다. 지원하는 Schema.org 타입:
+
+- `Article`, `Product`, `Organization`, `Person`
+- `WebSite`, `FAQPage`, `BreadcrumbList`
+
+`@graph` 표기법과 배열을 처리합니다. 잘못된 JSON은 무시됩니다.
+
+```typescript
+const result = await scraper.scrapeUrl('https://example.com');
+
+for (const item of result.metadata.jsonLd ?? []) {
+  console.log(item['@type']); // "Article", "Organization" 등
+}
+```
+
+## oEmbed
+
+`<link type="application/json+oembed">` 태그에서 [oEmbed](https://oembed.com/) 데이터를 검색하고 가져옵니다.
+
+```typescript
+import { createScraper, oembed } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [oembed] });
+```
+
+이 플러그인은 비동기입니다 — oEmbed 엔드포인트에 추가 HTTP 요청을 보냅니다. 반환 데이터:
+
+| 필드 | 설명 |
+| --- | --- |
+| `type` | 리소스 타입 (`photo`, `video`, `link`, `rich`) |
+| `title` | 리소스 제목 |
+| `author_name` | 작성자 이름 |
+| `author_url` | 작성자 URL |
+| `provider_name` | 제공자 이름 |
+| `provider_url` | 제공자 URL |
+| `thumbnail_url` | 썸네일 이미지 URL |
+| `html` | 임베드 HTML (`video`/`rich` 타입) |
+
+```typescript
+const result = await scraper.scrapeUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+console.log(result.metadata.oembed);
+// { type: "video", title: "...", author_name: "...", html: "<iframe ...>" }
+```
+
+## 플러그인 조합
+
+플러그인은 `Promise.all`로 병렬 실행됩니다. 배열 순서는 우선순위에 영향을 주지 않습니다 — [리졸브 규칙](/ko/docs/options#커스텀-리졸브-규칙)이 우선순위를 결정합니다.
+
+```typescript
+// 모두 같은 병합 결과를 생성:
+createScraper({ plugins: [metaTags, openGraph, twitter] });
+createScraper({ plugins: [twitter, openGraph, metaTags] });
+```
+
+커스텀 플러그인을 만들려면 [커스텀 플러그인](/ko/docs/custom-plugins)을 참고하세요.

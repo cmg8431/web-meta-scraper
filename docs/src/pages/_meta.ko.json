@@ -1,0 +1,17 @@
+{
+  "index": {
+    "type": "page",
+    "display": "hidden",
+    "theme": {
+      "layout": "full"
+    }
+  },
+  "docs": {
+    "type": "page",
+    "title": "문서"
+  },
+  "playground": {
+    "type": "page",
+    "title": "플레이그라운드"
+  }
+}

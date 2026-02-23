@@ -1,0 +1,75 @@
+# 설치
+
+import { Tabs, Tab } from 'nextra/components';
+
+<Tabs items={['npm', 'pnpm', 'yarn', 'bun']}>
+  <Tab>
+    ```bash
+    npm install web-meta-scraper
+    ```
+  </Tab>
+  <Tab>
+    ```bash
+    pnpm add web-meta-scraper
+    ```
+  </Tab>
+  <Tab>
+    ```bash
+    yarn add web-meta-scraper
+    ```
+  </Tab>
+  <Tab>
+    ```bash
+    bun add web-meta-scraper
+    ```
+  </Tab>
+</Tabs>
+
+## 요구 사항
+
+- **Node.js** 18 이상 (네이티브 `fetch()` 지원 필요)
+- **TypeScript** 5.0+ (선택 사항이지만 권장)
+
+## 모듈 포맷
+
+CommonJS와 ESM 빌드를 모두 제공합니다:
+
+```typescript
+// ESM
+import { scrape, createScraper } from 'web-meta-scraper';
+
+// CommonJS
+const { scrape, createScraper } = require('web-meta-scraper');
+```
+
+## Export 목록
+
+| Export | 설명 |
+| --- | --- |
+| `scrape` | 편의 함수 — URL/HTML 자동 감지, 모든 빌트인 플러그인 사용 |
+| `createScraper` | 플러그인, 규칙, 옵션을 세밀하게 제어하는 팩토리 함수 |
+| `ScraperError` | 실패 시 throw되는 커스텀 에러 클래스 |
+| `metaTags` | 표준 HTML 메타 태그 플러그인 |
+| `openGraph` | Open Graph 프로토콜 플러그인 |
+| `twitter` | Twitter Cards 플러그인 |
+| `jsonLd` | JSON-LD 구조화된 데이터 플러그인 |
+| `oembed` | oEmbed 디스커버리 플러그인 |
+| `DEFAULT_RULES` | 기본 우선순위 리졸브 규칙 |
+| `createContext` | 플러그인 테스트용 `ScrapeContext` 생성 헬퍼 |
+| `fetchHtml` | 독립 HTML fetcher 함수 |
+
+### 타입 Export
+
+| 타입 | 설명 |
+| --- | --- |
+| `ScraperConfig` | `createScraper()` 설정 타입 |
+| `ScraperResult` | `metadata`와 `sources`를 포함하는 반환 타입 |
+| `ResolvedMetadata` | 병합된 메타데이터 출력 타입 |
+| `Plugin` | 플러그인 함수 타입 |
+| `PluginResult` | 플러그인 반환 타입 |
+| `ScrapeContext` | 플러그인에 전달되는 컨텍스트 |
+| `ResolveRule` | 우선순위 리졸브 규칙 타입 |
+| `FetchOptions` | `fetchHtml` 옵션 타입 |
+| `ScraperOptions` | 일반 스크래퍼 옵션 타입 |
+| `JsonLdMetadata` | JSON-LD 데이터 타입 |
+| `OEmbedData` | oEmbed 데이터 타입 |

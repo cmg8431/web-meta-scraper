@@ -1,0 +1,106 @@
+# 빠른 시작
+
+## 간단한 방법 — `scrape()`
+
+`scrape()` 함수는 URL과 HTML을 자동 감지하고 모든 빌트인 플러그인을 사용합니다:
+
+```typescript
+import { scrape } from 'web-meta-scraper';
+
+// URL에서 — 자동으로 가져와서 파싱
+const result = await scrape('https://example.com');
+
+// HTML 문자열에서
+const result = await scrape('<html><head><title>Hello</title></head></html>');
+
+console.log(result.metadata);
+// {
+//   title: "Example Domain",
+//   description: "This domain is for use in illustrative examples.",
+//   image: "https://example.com/og-image.png",
+//   url: "https://example.com",
+//   type: "website",
+//   siteName: "Example",
+//   favicon: "https://example.com/favicon.ico",
+//   ...
+// }
+```
+
+## 세밀한 제어 — `createScraper()`
+
+어떤 플러그인을 사용할지, fetch 동작, 후처리를 제어해야 할 때 `createScraper()`를 사용합니다:
+
+```typescript
+import { createScraper, metaTags, openGraph, twitter } from 'web-meta-scraper';
+
+const scraper = createScraper({
+  plugins: [metaTags, openGraph, twitter],
+  fetch: {
+    timeout: 10000,
+    userAgent: 'MyBot/1.0',
+  },
+  postProcess: {
+    maxDescriptionLength: 100,
+    secureImages: true,
+  },
+});
+```
+
+스크래퍼 객체는 두 가지 메서드를 제공합니다:
+
+### `scraper.scrapeUrl(url)`
+
+페이지를 가져와서 메타데이터를 추출합니다:
+
+```typescript
+const result = await scraper.scrapeUrl('https://example.com');
+```
+
+### `scraper.scrape(html, options?)`
+
+HTML 문자열을 직접 파싱합니다. 상대 경로 해석을 위해 `url`을 전달할 수 있습니다:
+
+```typescript
+const html = `
+<html>
+  <head>
+    <title>My Page</title>
+    <meta property="og:title" content="My Page - OG" />
+    <meta property="og:description" content="A description from Open Graph" />
+    <link rel="icon" href="/favicon.ico" />
+  </head>
+</html>
+`;
+
+const result = await scraper.scrape(html, { url: 'https://example.com' });
+
+console.log(result.metadata.title);    // "My Page - OG" (OG가 더 높은 우선순위)
+console.log(result.metadata.favicon);  // "https://example.com/favicon.ico" (절대경로로 변환)
+```
+
+## 결과 구조
+
+두 메서드 모두 `ScraperResult`를 반환합니다:
+
+```typescript
+interface ScraperResult {
+  metadata: ResolvedMetadata;                    // 병합된 메타데이터
+  sources: Record<string, Record<string, unknown>>; // 각 플러그인의 원본 데이터
+}
+```
+
+`sources` 필드로 각 플러그인의 원본 출력에 접근할 수 있어 디버깅이나 커스텀 로직에 유용합니다:
+
+```typescript
+const result = await scrape('https://example.com');
+
+// 병합된 결과
+result.metadata.title; // "Example" (OG에서, 가장 높은 우선순위)
+
+// 플러그인별 원본 데이터
+result.sources['open-graph'].title;  // "Example"
+result.sources['meta-tags'].title;   // "Example Domain"
+result.sources['twitter'].title;     // "Example | Twitter"
+```
+
+전체 설정 옵션은 [설정](/ko/docs/options) 페이지를 참고하세요.

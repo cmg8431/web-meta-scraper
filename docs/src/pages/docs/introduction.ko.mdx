@@ -1,0 +1,59 @@
+# 소개
+
+**web-meta-scraper**는 플러그인 기반 아키텍처로 웹 페이지 메타데이터를 추출하는 TypeScript 라이브러리입니다.
+
+## 왜 web-meta-scraper인가?
+
+| | web-meta-scraper | metascraper | open-graph-scraper |
+|---|---|---|---|
+| **의존성** | 1개 (`cheerio`) | 10개+ | 4개+ |
+| **번들 크기** | ~5KB min+gzip | ~50KB+ | ~15KB+ |
+| **플러그인 시스템** | 조합 가능한 플러그인 | 규칙 기반 | 모놀리식 |
+| **커스텀 플러그인** | 간단한 함수 | 복잡한 규칙 | 미지원 |
+| **TypeScript** | 퍼스트 클래스 | 부분 지원 | 부분 지원 |
+| **oEmbed** | 내장 플러그인 | 별도 패키지 | 미지원 |
+| **커스텀 규칙** | 설정 가능 | 고정 | 고정 |
+| **HTTP 클라이언트** | 네이티브 `fetch()` | `got` | `undici` |
+
+## 동작 방식
+
+1. `createScraper()`로 스크래퍼를 생성합니다 (또는 `scrape()` 단축 함수 사용).
+2. 스크래퍼가 URL에서 HTML을 가져오거나, 전달된 HTML 문자열을 받습니다.
+3. 각 플러그인이 `ScrapeContext`를 통해 HTML에서 메타데이터를 추출합니다.
+4. 리졸버가 우선순위 규칙에 따라 결과를 병합합니다 — 예: `og:title`이 `<title>`보다 우선.
+5. 병합된 `metadata`와 원본 `sources`가 포함된 `ScraperResult`를 반환합니다.
+
+```typescript
+import { scrape } from 'web-meta-scraper';
+
+const result = await scrape('https://example.com');
+
+console.log(result.metadata.title);       // 가장 높은 우선순위의 제목
+console.log(result.metadata.description);  // 가장 높은 우선순위의 설명
+console.log(result.metadata.image);        // 가장 높은 우선순위의 이미지 URL
+
+// 각 플러그인이 추출한 원본 데이터 확인
+console.log(result.sources['open-graph']); // { title: "...", image: "..." }
+console.log(result.sources['meta-tags']);   // { title: "...", keywords: [...] }
+```
+
+## 우선순위 병합
+
+같은 필드가 여러 소스에 존재할 경우 가장 높은 우선순위의 값이 사용됩니다:
+
+| 필드            | 우선순위 (높음 → 낮음)              |
+| -------------- | -------------------------------- |
+| `title`        | Open Graph → Meta Tags → Twitter |
+| `description`  | Open Graph → Meta Tags → Twitter |
+| `image`        | Open Graph → Twitter             |
+| `url`          | Open Graph → Meta Tags (canonical) |
+
+소스 고유 필드(`twitterCard`, `siteName`, `locale`, `jsonLd`, `oembed`)는 항상 그대로 포함됩니다.
+
+`createScraper()`의 `rules` 옵션으로 우선순위 규칙을 커스터마이징할 수 있습니다.
+
+## 다음 단계
+
+- [설치](/ko/docs/installation) — 프로젝트에 추가하기
+- [빠른 시작](/ko/docs/quick-start) — 실제 사용 예시
+- [플러그인](/ko/docs/plugins) — 빌트인 플러그인 알아보기

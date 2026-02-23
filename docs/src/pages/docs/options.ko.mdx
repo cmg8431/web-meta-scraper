@@ -1,0 +1,136 @@
+# 설정
+
+`createScraper()`는 플러그인, 리졸브 규칙, fetch 동작, 후처리를 설정하는 `ScraperConfig` 객체를 받습니다.
+
+```typescript
+import { createScraper, metaTags, openGraph, twitter, jsonLd, oembed, DEFAULT_RULES } from 'web-meta-scraper';
+
+const scraper = createScraper({
+  plugins: [metaTags, openGraph, twitter, jsonLd, oembed],
+  rules: DEFAULT_RULES,
+  fetch: { /* ... */ },
+  postProcess: { /* ... */ },
+});
+```
+
+## `ScraperConfig`
+
+| 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| `plugins` | `Plugin[]` | 사용할 플러그인 배열 (`createScraper`에서 기본값: `[]`, `scrape()`는 모든 빌트인) |
+| `rules` | `ResolveRule[]` | 우선순위 리졸브 규칙 (기본값: `DEFAULT_RULES`) |
+| `fetch` | `FetchOptions` | HTTP fetch 옵션 (`scrapeUrl`에 적용) |
+| `postProcess` | `PostProcessOptions` | 후처리 동작 |
+
+## Fetch 옵션
+
+`scrapeUrl()` HTTP 요청 옵션:
+
+| 옵션 | 타입 | 기본값 | 설명 |
+| --- | --- | --- | --- |
+| `timeout` | `number` | `30000` | 요청 타임아웃 (밀리초) |
+| `userAgent` | `string` | `'Mozilla/5.0 (compatible; WebMetaScraper/2.0;)'` | User-Agent 헤더 |
+| `followRedirects` | `boolean` | `true` | HTTP 리다이렉트 따라가기 |
+| `maxContentLength` | `number` | `5242880` | 최대 응답 크기 (바이트, 5MB) |
+
+```typescript
+const scraper = createScraper({
+  plugins: [openGraph],
+  fetch: {
+    timeout: 10000,
+    userAgent: 'MyBot/1.0',
+    maxContentLength: 1024 * 1024, // 1MB
+  },
+});
+```
+
+## 후처리 옵션
+
+| 옵션 | 타입 | 기본값 | 설명 |
+| --- | --- | --- | --- |
+| `maxDescriptionLength` | `number` | `200` | 설명 최대 길이. 초과 시 `...`으로 잘림. |
+| `secureImages` | `boolean` | `true` | `http://`와 `//` 이미지/파비콘 URL을 `https://`로 변환 |
+| `omitEmpty` | `boolean` | `true` | `null`, `undefined`, 빈 문자열, 빈 배열 제거 |
+| `fallbacks` | `boolean` | `true` | 누락된 필드에 폴백 로직 적용 |
+
+```typescript
+const scraper = createScraper({
+  plugins: [metaTags, openGraph],
+  postProcess: {
+    maxDescriptionLength: 100,
+    secureImages: true,
+    omitEmpty: true,
+    fallbacks: true,
+  },
+});
+```
+
+### 폴백 동작
+
+`fallbacks: true` (기본값)일 때:
+1. **제목 폴백** — `title`이 없으면 `siteName`을 대신 사용.
+2. **설명 폴백** — `description`이 없으면 JSON-LD 구조화된 데이터에서 추출.
+3. **URL 변환** — 상대 경로 이미지/파비콘 (`/image.png`)을 페이지 URL 기준으로 절대 경로로 변환.
+
+### 이미지 보안
+
+`secureImages: true` (기본값)일 때:
+- `http://example.com/img.png` → `https://example.com/img.png`
+- `//example.com/img.png` → `https://example.com/img.png`
+
+## 커스텀 리졸브 규칙
+
+기본 규칙은 서로 다른 플러그인의 메타데이터가 어떻게 병합되는지 결정합니다. 전체를 오버라이드할 수 있습니다:
+
+```typescript
+import { createScraper, metaTags, openGraph, twitter, type ResolveRule } from 'web-meta-scraper';
+
+const myRules: ResolveRule[] = [
+  {
+    field: 'title',
+    sources: [
+      { plugin: 'twitter', key: 'title', priority: 3 },   // Twitter 우선
+      { plugin: 'open-graph', key: 'title', priority: 2 },
+      { plugin: 'meta-tags', key: 'title', priority: 1 },
+    ],
+  },
+  {
+    field: 'description',
+    sources: [
+      { plugin: 'open-graph', key: 'description', priority: 2 },
+      { plugin: 'meta-tags', key: 'description', priority: 1 },
+    ],
+  },
+  // 커스텀 필드 추가...
+];
+
+const scraper = createScraper({
+  plugins: [metaTags, openGraph, twitter],
+  rules: myRules,
+});
+```
+
+각 `ResolveRule`은 최종 `field` 이름을 `sources` 배열에 매핑합니다. 각 소스는:
+- `plugin` — 플러그인 이름 (`PluginResult.name`과 일치)
+- `key` — 플러그인 `data` 객체의 키
+- `priority` — 높은 숫자가 우선
+
+### 기본 규칙
+
+| 결과 필드 | 소스 (우선순위 순) |
+| --- | --- |
+| `title` | open-graph (3) → meta-tags (2) → twitter (1) |
+| `description` | open-graph (3) → meta-tags (2) → twitter (1) |
+| `image` | open-graph (2) → twitter (1) |
+| `url` | open-graph (2) → meta-tags/canonicalUrl (1) |
+| `favicon` | meta-tags (1) |
+| `author` | meta-tags (1) |
+| `keywords` | meta-tags (1) |
+| `type` | open-graph (1) |
+| `siteName` | open-graph (1) |
+| `locale` | open-graph (1) |
+| `twitterCard` | twitter/card (1) |
+| `twitterSite` | twitter/site (1) |
+| `twitterCreator` | twitter/creator (1) |
+| `jsonLd` | json-ld (1) |
+| `oembed` | oembed (1) |

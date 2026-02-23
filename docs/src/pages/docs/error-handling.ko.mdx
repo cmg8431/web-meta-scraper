@@ -1,0 +1,81 @@
+# 에러 처리
+
+web-meta-scraper는 fetch 실패나 파싱 오류 시 `ScraperError`를 throw합니다.
+
+## ScraperError
+
+`ScraperError`는 네이티브 `Error` 클래스를 확장하며, 원본 에러를 담는 `cause` 속성을 추가로 제공합니다.
+
+```typescript
+import { scrape, ScraperError } from 'web-meta-scraper';
+
+try {
+  const result = await scrape('https://example.com');
+} catch (error) {
+  if (error instanceof ScraperError) {
+    console.error(error.message); // 사람이 읽을 수 있는 메시지
+    console.error(error.cause);   // 원본 에러 (있는 경우)
+  }
+}
+```
+
+## 에러 시나리오
+
+| 시나리오 | 에러 메시지 |
+| --- | --- |
+| 요청 타임아웃 | `Request timeout after {timeout}ms` |
+| HTTP 에러 (4xx/5xx) | `Failed to fetch URL: {url}` |
+| HTML이 아닌 응답 | `Failed to fetch URL: {url}` (cause: `Invalid content type: {type}`) |
+| 응답 크기 초과 | `Failed to fetch URL: {url}` (cause: `Content too large: {bytes} bytes`) |
+| 잘못된 URL 프로토콜 | `Only HTTP(S) protocols are supported` |
+| 파싱 실패 | `Failed to scrape metadata` |
+
+## 타임아웃
+
+긴 대기를 방지하려면 커스텀 타임아웃을 설정하세요:
+
+```typescript
+import { createScraper, openGraph } from 'web-meta-scraper';
+
+const scraper = createScraper({
+  plugins: [openGraph],
+  fetch: { timeout: 5000 }, // 5초
+});
+
+try {
+  await scraper.scrapeUrl('https://slow-site.example.com');
+} catch (error) {
+  // ScraperError: Request timeout after 5000ms
+}
+```
+
+## 콘텐츠 크기 제한
+
+너무 큰 페이지 다운로드를 방지합니다:
+
+```typescript
+const scraper = createScraper({
+  plugins: [openGraph],
+  fetch: { maxContentLength: 1024 * 1024 }, // 1MB
+});
+```
+
+## URL 검증
+
+`scrapeUrl()`은 입력이 유효한 HTTP 또는 HTTPS URL인지 검증합니다:
+
+```typescript
+// 즉시 throw — 네트워크 요청 없음
+await scraper.scrapeUrl('ftp://example.com');
+// ScraperError: Only HTTP(S) protocols are supported
+```
+
+HTML을 직접 파싱하려면 URL 검증이 없는 `scraper.scrape()`를 사용하세요.
+
+## JSON-LD 파싱 에러
+
+`<script type="application/ld+json">` 태그의 잘못된 JSON은 무시됩니다 — 플러그인이 throw하지 않고 해당 항목을 건너뜁니다. 많은 웹사이트에서 JSON-LD 마크업이 깨져있기 때문에 의도된 동작입니다.
+
+## oEmbed Fetch 에러
+
+oEmbed 플러그인은 oEmbed 엔드포인트에 접근할 수 없거나 에러가 반환되면 빈 데이터를 반환합니다. 하나의 실패한 엔드포인트가 전체 스크래핑을 중단시키지 않도록 합니다.
