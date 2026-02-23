@@ -113,6 +113,12 @@ const result = await scraper.scrape(html, { url: 'https://example.com' });
 | **Favicons** | `favicons` | 모든 아이콘 링크 (`icon`, `apple-touch-icon`, `mask-icon`, `manifest`) + `sizes`, `type` |
 | **Feeds** | `feeds` | RSS (`application/rss+xml`) 및 Atom (`application/atom+xml`) 피드 링크 + `title` |
 | **Robots** | `robots` | Robots 메타 디렉티브 (`noindex`, `nofollow`, `noarchive`, `nosnippet` 등) + 인덱싱 가능 여부 플래그 |
+| **Date** | `date` | 발행일 (`article:published_time`, Dublin Core, JSON-LD, `<time>`) 및 수정일 |
+| **Logo** | `logo` | `og:logo`, Schema.org 마이크로데이터, JSON-LD Organization/Publisher에서 사이트 로고 URL |
+| **Lang** | `lang` | `<html lang>`, `og:locale`, `content-language`, JSON-LD에서 BCP 47 언어 태그 |
+| **Video** | `video` | `og:video`, `twitter:player`, `<video>` 요소, JSON-LD `VideoObject`에서 비디오 리소스 |
+| **Audio** | `audio` | `og:audio`, `<audio>` 요소, JSON-LD `AudioObject`에서 오디오 리소스 |
+| **iFrame** | `iframe` | `twitter:player`에서 임베드 가능한 iframe HTML + oEmbed 폴백 |
 
 ```typescript
 // 필요한 것만 사용
@@ -121,7 +127,7 @@ const scraper = createScraper({
 });
 ```
 
-> **참고:** `scrape()` 단축 함수는 기본적으로 코어 플러그인(`metaTags`, `openGraph`, `twitter`, `jsonLd`)만 사용합니다. `favicons`, `feeds`, `robots`를 사용하려면 `createScraper()`에 명시적으로 전달하세요.
+> **참고:** `scrape()` 단축 함수는 기본적으로 코어 플러그인(`metaTags`, `openGraph`, `twitter`, `jsonLd`)만 사용합니다. `favicons`, `feeds`, `robots`, `date`, `logo`, `lang`, `video`, `audio`, `iframe` 등을 사용하려면 `createScraper()`에 명시적으로 전달하세요.
 
 ## 배치 스크래핑
 
@@ -208,6 +214,21 @@ const scraper = createScraper({
 });
 ```
 
+### 스텔스 모드
+
+일부 웹사이트는 TLS 핑거프린팅으로 자동화된 요청을 차단합니다. 스텔스 모드를 활성화하면 브라우저와 유사한 TLS 핑거프린트로 HTTP/2를 사용합니다:
+
+```typescript
+const scraper = createScraper({
+  plugins: [metaTags, openGraph],
+  fetch: {
+    stealth: true,
+  },
+});
+```
+
+> **주의:** 스텔스 모드는 기본적으로 비활성화되어 있습니다. 스텔스 모드로 빠른 반복 요청 시 속도 제한(예: JS 챌린지 페이지)이 발생할 수 있습니다. 항상 `robots.txt`와 사이트 이용약관을 준수하세요. 책임감 있게 사용하세요.
+
 ### 폴백 동작
 
 `fallbacks: true` (기본값)일 때:
@@ -258,6 +279,39 @@ try {
   }
 }
 ```
+
+## 메타데이터 검증
+
+`validateMetadata()`는 14가지 SEO 규칙에 따라 메타데이터 품질을 점수화(0–100)하고 이슈를 보고합니다:
+
+```typescript
+import { scrape, validateMetadata } from 'web-meta-scraper';
+
+const result = await scrape('https://example.com');
+const validation = validateMetadata(result);
+
+console.log(validation.score);  // 85
+console.log(validation.issues);
+// [
+//   { field: "description", severity: "warning", message: "Description is too short (under 50 characters)" },
+// ]
+```
+
+## 콘텐츠 추출
+
+`extractContent()`는 네비게이션, 광고, 사이드바를 제거하고 웹 페이지의 본문 텍스트를 추출합니다:
+
+```typescript
+import { extractContent } from 'web-meta-scraper';
+
+const content = await extractContent('https://example.com/article');
+console.log(content.content);   // "기사 본문 내용..."
+console.log(content.wordCount); // 1234
+console.log(content.language);  // "ko"
+console.log(content.metadata);  // { title: "기사 제목", description: "..." }
+```
+
+CJK 단어 수 계산을 지원하며, HTML 문자열 파싱을 위한 `extractFromHtml()`도 제공합니다.
 
 ## MCP 서버
 

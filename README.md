@@ -113,6 +113,12 @@ const result = await scraper.scrape(html, { url: 'https://example.com' });
 | **Favicons** | `favicons` | All icon links (`icon`, `apple-touch-icon`, `mask-icon`, `manifest`) with `sizes` and `type` |
 | **Feeds** | `feeds` | RSS (`application/rss+xml`) and Atom (`application/atom+xml`) feed links with `title` |
 | **Robots** | `robots` | Robots meta directives (`noindex`, `nofollow`, `noarchive`, `nosnippet`, etc.) with indexability flags |
+| **Date** | `date` | Publication date (`article:published_time`, Dublin Core, JSON-LD, `<time>`) and modification date |
+| **Logo** | `logo` | Site logo URL from `og:logo`, Schema.org microdata, JSON-LD Organization/Publisher |
+| **Lang** | `lang` | Document language as BCP 47 tag from `<html lang>`, `og:locale`, `content-language`, JSON-LD |
+| **Video** | `video` | Video resources from `og:video`, `twitter:player`, `<video>` elements, JSON-LD `VideoObject` |
+| **Audio** | `audio` | Audio resources from `og:audio`, `<audio>` elements, JSON-LD `AudioObject` |
+| **iFrame** | `iframe` | Embeddable iframe HTML from `twitter:player` with oEmbed fallback |
 
 ```typescript
 // Use only what you need
@@ -121,7 +127,7 @@ const scraper = createScraper({
 });
 ```
 
-> **Note:** The `scrape()` shorthand uses only the core plugins (`metaTags`, `openGraph`, `twitter`, `jsonLd`) by default. To use `favicons`, `feeds`, or `robots`, pass them explicitly via `createScraper()`.
+> **Note:** The `scrape()` shorthand uses only the core plugins (`metaTags`, `openGraph`, `twitter`, `jsonLd`) by default. To use other plugins like `favicons`, `feeds`, `robots`, `date`, `logo`, `lang`, `video`, `audio`, or `iframe`, pass them explicitly via `createScraper()`.
 
 ## Batch Scraping
 
@@ -208,6 +214,21 @@ const scraper = createScraper({
 });
 ```
 
+### Stealth Mode
+
+Some websites block automated requests via TLS fingerprinting. Enable stealth mode to use HTTP/2 with a browser-like TLS fingerprint:
+
+```typescript
+const scraper = createScraper({
+  plugins: [metaTags, openGraph],
+  fetch: {
+    stealth: true,
+  },
+});
+```
+
+> **Warning:** Stealth mode is disabled by default. Rapid requests with stealth mode may trigger rate limiting (e.g. JS challenge pages). Always respect `robots.txt` and site terms of service. Use responsibly.
+
 ### Fallback Behavior
 
 When `fallbacks: true` (default):
@@ -258,6 +279,39 @@ try {
   }
 }
 ```
+
+## Metadata Validator
+
+`validateMetadata()` scores metadata quality (0–100) and reports issues across 14 SEO rules:
+
+```typescript
+import { scrape, validateMetadata } from 'web-meta-scraper';
+
+const result = await scrape('https://example.com');
+const validation = validateMetadata(result);
+
+console.log(validation.score);  // 85
+console.log(validation.issues);
+// [
+//   { field: "description", severity: "warning", message: "Description is too short (under 50 characters)" },
+// ]
+```
+
+## Content Extractor
+
+`extractContent()` strips navigation, ads, and sidebars to extract the main text content from a web page:
+
+```typescript
+import { extractContent } from 'web-meta-scraper';
+
+const content = await extractContent('https://example.com/article');
+console.log(content.content);   // "Article body text..."
+console.log(content.wordCount); // 1234
+console.log(content.language);  // "en"
+console.log(content.metadata);  // { title: "Article Title", description: "..." }
+```
+
+Supports CJK word counting and provides `extractFromHtml()` for parsing raw HTML strings.
 
 ## MCP Server
 
