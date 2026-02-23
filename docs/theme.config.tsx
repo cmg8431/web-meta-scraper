@@ -1,6 +1,6 @@
 import { useRouter } from 'next/router';
 import type { DocsThemeConfig } from 'nextra-theme-docs';
-import { useConfig } from 'nextra-theme-docs';
+import { useConfig, useTheme } from 'nextra-theme-docs';
 
 const config: DocsThemeConfig = {
   project: {
@@ -16,19 +16,20 @@ const config: DocsThemeConfig = {
     }
   },
   logo: (
-    <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>
+    <span className="text-[1.1rem] font-bold text-gray-900 dark:text-gray-100">
       web-meta-scraper
     </span>
   ),
   head: function useHead() {
     const { title } = useConfig();
+    const { resolvedTheme } = useTheme();
+    const themeColor = resolvedTheme === 'dark' ? '#111' : '#fff';
 
     return (
       <>
-        <meta name="msapplication-TileColor" content="#fff" />
-        <meta name="theme-color" content="#fff" />
+        <meta name="msapplication-TileColor" content={themeColor} />
+        <meta name="theme-color" content={themeColor} />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <meta httpEquiv="Content-Language" content="en" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta
           name="og:title"
