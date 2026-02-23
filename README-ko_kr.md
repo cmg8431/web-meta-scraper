@@ -233,6 +233,42 @@ try {
 }
 ```
 
+## MCP 서버
+
+[`web-meta-scraper-mcp`](https://www.npmjs.com/package/web-meta-scraper-mcp)는 web-meta-scraper를 [MCP(Model Context Protocol)](https://modelcontextprotocol.io) 서버로 제공합니다. Claude Code, Claude Desktop 등 MCP 클라이언트에서 메타데이터 추출 도구를 바로 사용할 수 있습니다.
+
+### 설정
+
+**Claude Code:**
+
+```bash
+claude mcp add web-meta-scraper -- npx -y web-meta-scraper-mcp
+```
+
+**Claude Desktop / Cursor:**
+
+설정 파일에 아래 내용을 추가합니다:
+
+```json
+{
+  "mcpServers": {
+    "web-meta-scraper": {
+      "command": "npx",
+      "args": ["-y", "web-meta-scraper-mcp"]
+    }
+  }
+}
+```
+
+### 제공 도구
+
+| 도구 | 설명 |
+|------|------|
+| `scrape_url` | URL에서 메타데이터 추출 (Open Graph, Twitter Cards, JSON-LD, meta tags) |
+| `scrape_html` | HTML 문자열에서 메타데이터 추출 (상대 경로 해석을 위한 기준 URL 옵션 제공) |
+
+자세한 사용법과 예시는 [MCP 패키지 README](./mcp/README.md)를 참고하세요.
+
 ## 라이선스
 
 MIT
