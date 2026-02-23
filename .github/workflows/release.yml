@@ -31,7 +31,7 @@ jobs:
         run: pnpm install
 
       - name: Build
-        run: pnpm build
+        run: pnpm -r build
 
       - name: Type Check
         run: pnpm typecheck
