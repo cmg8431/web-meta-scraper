@@ -80,6 +80,18 @@ export const DEFAULT_RULES: ResolveRule[] = [
     field: 'oembed',
     sources: [{ plugin: 'oembed', key: 'oembed', priority: 1 }],
   },
+  {
+    field: 'favicons',
+    sources: [{ plugin: 'favicons', key: 'favicons', priority: 1 }],
+  },
+  {
+    field: 'feeds',
+    sources: [{ plugin: 'feeds', key: 'feeds', priority: 1 }],
+  },
+  {
+    field: 'robots',
+    sources: [{ plugin: 'robots', key: 'robots', priority: 1 }],
+  },
 ];
 
 export function resolve(
