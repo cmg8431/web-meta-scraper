@@ -21,8 +21,22 @@ export default async function handler(
   }
 
   try {
-    const { scrape } = await import('web-meta-scraper');
-    const result = await scrape(url);
+    const {
+      createScraper,
+      metaTags,
+      openGraph,
+      twitter,
+      jsonLd,
+      favicons,
+      feeds,
+      robots,
+    } = await import('web-meta-scraper');
+
+    const scraper = createScraper({
+      plugins: [metaTags, openGraph, twitter, jsonLd, favicons, feeds, robots],
+    });
+
+    const result = await scraper.scrapeUrl(url);
     return res.status(200).json(result);
   } catch (e: any) {
     return res.status(500).json({ error: e.message || 'Scrape failed' });
