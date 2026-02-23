@@ -40,32 +40,24 @@ export const video: Plugin = (ctx): PluginResult => {
     'content',
   );
   const ogVideoUrl =
-    ogVideoSecure || getAttr($('meta[property="og:video"]'), 'content') ||
+    ogVideoSecure ||
+    getAttr($('meta[property="og:video"]'), 'content') ||
     getAttr($('meta[property="og:video:url"]'), 'content');
   if (ogVideoUrl) {
     add({
       url: resolveUrl(ogVideoUrl, url),
       type: getAttr($('meta[property="og:video:type"]'), 'content'),
-      width: toInt(
-        getAttr($('meta[property="og:video:width"]'), 'content'),
-      ),
-      height: toInt(
-        getAttr($('meta[property="og:video:height"]'), 'content'),
-      ),
+      width: toInt(getAttr($('meta[property="og:video:width"]'), 'content')),
+      height: toInt(getAttr($('meta[property="og:video:height"]'), 'content')),
     });
   }
 
   // twitter:player
-  const twitterPlayer = getAttr(
-    $('meta[name="twitter:player"]'),
-    'content',
-  );
+  const twitterPlayer = getAttr($('meta[name="twitter:player"]'), 'content');
   if (twitterPlayer) {
     add({
       url: resolveUrl(twitterPlayer, url),
-      width: toInt(
-        getAttr($('meta[name="twitter:player:width"]'), 'content'),
-      ),
+      width: toInt(getAttr($('meta[name="twitter:player:width"]'), 'content')),
       height: toInt(
         getAttr($('meta[name="twitter:player:height"]'), 'content'),
       ),

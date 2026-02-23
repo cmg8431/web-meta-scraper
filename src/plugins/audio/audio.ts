@@ -33,7 +33,8 @@ export const audio: Plugin = (ctx): PluginResult => {
     'content',
   );
   const ogAudioUrl =
-    ogAudioSecure || getAttr($('meta[property="og:audio"]'), 'content') ||
+    ogAudioSecure ||
+    getAttr($('meta[property="og:audio"]'), 'content') ||
     getAttr($('meta[property="og:audio:url"]'), 'content');
   if (ogAudioUrl) {
     add({

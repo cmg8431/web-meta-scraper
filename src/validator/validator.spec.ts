@@ -98,7 +98,7 @@ describe('validateMetadata', () => {
       (i) => i.field === 'title' && i.severity === 'error',
     );
     expect(titleIssue).toBeDefined();
-    expect(titleIssue!.category).toBe('essential');
+    expect(titleIssue?.category).toBe('essential');
   });
 
   it('detects missing description as error', () => {
@@ -120,7 +120,7 @@ describe('validateMetadata', () => {
       (i) => i.field === 'description' && i.severity === 'warning',
     );
     expect(issue).toBeDefined();
-    expect(issue!.message).toContain('too short');
+    expect(issue?.message).toContain('too short');
   });
 
   it('warns when description is too long', () => {
@@ -133,7 +133,7 @@ describe('validateMetadata', () => {
       (i) => i.field === 'description' && i.severity === 'warning',
     );
     expect(issue).toBeDefined();
-    expect(issue!.message).toContain('too long');
+    expect(issue?.message).toContain('too long');
   });
 
   it('detects missing Open Graph tags', () => {
@@ -148,7 +148,7 @@ describe('validateMetadata', () => {
     const v = validateMetadata(result);
     const twitterCardIssue = v.issues.find((i) => i.field === 'twitter:card');
     expect(twitterCardIssue).toBeDefined();
-    expect(twitterCardIssue!.severity).toBe('warning');
+    expect(twitterCardIssue?.severity).toBe('warning');
   });
 
   it('detects missing JSON-LD', () => {
@@ -156,7 +156,7 @@ describe('validateMetadata', () => {
     const v = validateMetadata(result);
     const jsonLdIssue = v.issues.find((i) => i.field === 'json-ld');
     expect(jsonLdIssue).toBeDefined();
-    expect(jsonLdIssue!.category).toBe('structured-data');
+    expect(jsonLdIssue?.category).toBe('structured-data');
   });
 
   it('detects insecure image URL', () => {
@@ -164,7 +164,7 @@ describe('validateMetadata', () => {
     const v = validateMetadata(result);
     const secIssue = v.issues.find((i) => i.category === 'security');
     expect(secIssue).toBeDefined();
-    expect(secIssue!.message).toContain('insecure HTTP');
+    expect(secIssue?.message).toContain('insecure HTTP');
   });
 
   it('score never goes below 0', () => {

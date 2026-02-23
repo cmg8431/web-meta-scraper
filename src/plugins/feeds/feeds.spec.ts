@@ -34,7 +34,11 @@ describe('feeds plugin', () => {
       <link rel="alternate" type="application/atom+xml" href="/atom.xml" title="Atom">
     </head></html>`;
     const result = run(html, 'https://example.com');
-    const feedList = result.data.feeds as any[];
+    const feedList = result.data.feeds as {
+      url: string;
+      title?: string;
+      type: string;
+    }[];
     expect(feedList).toHaveLength(2);
     expect(feedList[0].type).toBe('rss');
     expect(feedList[1].type).toBe('atom');
@@ -58,7 +62,7 @@ describe('feeds plugin', () => {
     const html =
       '<html><head><link rel="alternate" type="application/rss+xml" href="/blog/feed"></head></html>';
     const result = run(html, 'https://example.com/page');
-    expect((result.data.feeds as any[])[0].url).toBe(
+    expect((result.data.feeds as { url: string }[])[0].url).toBe(
       'https://example.com/blog/feed',
     );
   });

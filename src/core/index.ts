@@ -1,7 +1,11 @@
 import type { FetchOptions } from '../fetcher';
 import { fetchHtml } from '../fetcher';
 import type { Plugin, PluginResult } from '../types/plugin';
-import type { FaviconEntry, ResolvedMetadata, ScraperResult } from '../types/result';
+import type {
+  FaviconEntry,
+  ResolvedMetadata,
+  ScraperResult,
+} from '../types/result';
 import { toNormalizedText, toTruncatedText } from '../utils/text';
 import { createContext } from './context';
 import { ScraperError } from './errors';
@@ -103,7 +107,11 @@ function applyFallbacks(metadata: Record<string, unknown>): void {
   }
 
   // Best favicon selection: pick from favicons[] when favicon is missing
-  if (!metadata.favicon && Array.isArray(metadata.favicons) && metadata.favicons.length > 0) {
+  if (
+    !metadata.favicon &&
+    Array.isArray(metadata.favicons) &&
+    metadata.favicons.length > 0
+  ) {
     metadata.favicon = selectBestFavicon(metadata.favicons as FaviconEntry[]);
   }
 

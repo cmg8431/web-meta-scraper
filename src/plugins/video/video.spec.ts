@@ -65,9 +65,7 @@ describe('video plugin', () => {
     const result = run(`<html><head>
       <meta name="twitter:player" content="https://example.com/player">
     </head></html>`);
-    expect(result.data.videos).toEqual([
-      { url: 'https://example.com/player' },
-    ]);
+    expect(result.data.videos).toEqual([{ url: 'https://example.com/player' }]);
   });
 
   it('extracts <video> element with src', () => {
@@ -132,12 +130,15 @@ describe('video plugin', () => {
   });
 
   it('collects videos from multiple different sources', () => {
-    const result = run(`<html><head>
+    const result = run(
+      `<html><head>
       <meta property="og:video" content="https://example.com/og.mp4">
       <meta name="twitter:player" content="https://example.com/tw-player">
     </head><body>
       <video src="https://example.com/html5.mp4"></video>
-    </body></html>`, 'https://example.com');
+    </body></html>`,
+      'https://example.com',
+    );
     expect(result.data.videos).toHaveLength(3);
   });
 

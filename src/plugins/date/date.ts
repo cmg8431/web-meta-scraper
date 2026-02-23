@@ -25,10 +25,14 @@ export const date: Plugin = (ctx): PluginResult => {
   const data: Record<string, unknown> = {};
 
   // Open Graph article dates
-  const published =
-    getAttr($('meta[property="article:published_time"]'), 'content');
-  const modified =
-    getAttr($('meta[property="article:modified_time"]'), 'content');
+  const published = getAttr(
+    $('meta[property="article:published_time"]'),
+    'content',
+  );
+  const modified = getAttr(
+    $('meta[property="article:modified_time"]'),
+    'content',
+  );
 
   if (published) {
     const iso = toISO(published);

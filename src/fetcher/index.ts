@@ -32,8 +32,7 @@ async function fetchSimple(
 
   const response = await fetch(url, {
     headers: {
-      Accept:
-        'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'User-Agent': opts.userAgent,
       ...opts.headers,
     },
