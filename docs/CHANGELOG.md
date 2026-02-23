@@ -5,4 +5,4 @@
 ### Patch Changes
 
 - Updated dependencies [ab31477]
-  - web-meta-scraper@2.0.0
+  - web-meta-scraper@1.0.0

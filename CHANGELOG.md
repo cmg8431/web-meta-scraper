@@ -1,12 +1,8 @@
 # web-meta-scraper
 
-## 2.0.0
+## 1.0.0
 
-### Major Changes
-
-- ab31477: ## v1.0.0
-
-  ### Breaking Changes
+### Breaking Changes
 
   - **Plugin API redesigned**: Plugins now receive `ScrapeContext` instead of raw `(html, options)`. Return `PluginResult` with `{ name, data }` pattern.
   - **New core API**: `scrape()` function for quick usage, `createScraper()` for custom configuration.
