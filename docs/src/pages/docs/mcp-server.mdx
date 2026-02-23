@@ -1,0 +1,136 @@
+# MCP Server
+
+import { Tabs, Tab, Callout } from 'nextra/components';
+
+[`web-meta-scraper-mcp`](https://www.npmjs.com/package/web-meta-scraper-mcp) wraps web-meta-scraper as an [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server, allowing AI assistants like Claude Code and Claude Desktop to extract web page metadata as a tool.
+
+<Callout>
+  No installation required — run directly with `npx web-meta-scraper-mcp`.
+</Callout>
+
+## Client Setup
+
+<Tabs items={['Claude Code', 'Claude Desktop', 'Cursor']}>
+  <Tab>
+    ```bash
+    claude mcp add web-meta-scraper -- npx -y web-meta-scraper-mcp
+    ```
+  </Tab>
+  <Tab>
+    Add to your `claude_desktop_config.json`:
+
+    ```json
+    {
+      "mcpServers": {
+        "web-meta-scraper": {
+          "command": "npx",
+          "args": ["-y", "web-meta-scraper-mcp"]
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab>
+    Add to Cursor Settings > MCP:
+
+    ```json
+    {
+      "mcpServers": {
+        "web-meta-scraper": {
+          "command": "npx",
+          "args": ["-y", "web-meta-scraper-mcp"]
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Tools
+
+### `scrape_url`
+
+Extract metadata from a URL. Uses all built-in plugins (Open Graph, Twitter Cards, JSON-LD, meta tags).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | `string` | Yes | The URL to scrape metadata from |
+
+**Example request:**
+
+```json
+{
+  "name": "scrape_url",
+  "arguments": {
+    "url": "https://github.com"
+  }
+}
+```
+
+**Example response:**
+
+```json
+{
+  "metadata": {
+    "title": "GitHub: Let's build from here",
+    "description": "GitHub is where over 100 million developers shape the future of software.",
+    "image": "https://github.githubassets.com/assets/social-card.png",
+    "url": "https://github.com",
+    "type": "website",
+    "siteName": "GitHub"
+  },
+  "sources": {
+    "meta-tags": { "title": "GitHub: Let's build from here" },
+    "open-graph": { "title": "GitHub: Let's build from here" },
+    "twitter": {},
+    "json-ld": {}
+  }
+}
+```
+
+### `scrape_html`
+
+Extract metadata from a raw HTML string. Useful when you already have the HTML content.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `html` | `string` | Yes | The raw HTML string to extract metadata from |
+| `url` | `string` | No | Base URL for resolving relative paths (e.g. images, favicons) |
+
+**Example request:**
+
+```json
+{
+  "name": "scrape_html",
+  "arguments": {
+    "html": "<html><head><meta property=\"og:title\" content=\"Hello World\"/><meta property=\"og:image\" content=\"/img.png\"/></head></html>",
+    "url": "https://example.com"
+  }
+}
+```
+
+## Extracted Metadata
+
+The server extracts metadata using all built-in plugins:
+
+| Plugin | Fields |
+|--------|--------|
+| **Meta Tags** | `title`, `description`, `keywords`, `author`, `favicon`, `canonicalUrl` |
+| **Open Graph** | `og:title`, `og:description`, `og:image`, `og:url`, `og:type`, `og:site_name`, `og:locale` |
+| **Twitter Cards** | `twitter:title`, `twitter:description`, `twitter:image`, `twitter:card`, `twitter:site`, `twitter:creator` |
+| **JSON-LD** | Structured data (`Article`, `Product`, `Organization`, etc.) |
+
+Fields are automatically merged using [priority-based rules](/docs/options#priority-based-merging).
+
+## Local Development
+
+```bash
+# Install dependencies
+pnpm install
+
+# Build
+pnpm --filter web-meta-scraper-mcp build
+
+# Test with MCP Inspector
+npx @modelcontextprotocol/inspector node mcp/dist/index.js
+```

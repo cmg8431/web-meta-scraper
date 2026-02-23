@@ -1,0 +1,136 @@
+# MCP 서버
+
+import { Tabs, Tab, Callout } from 'nextra/components';
+
+[`web-meta-scraper-mcp`](https://www.npmjs.com/package/web-meta-scraper-mcp)는 web-meta-scraper를 [MCP(Model Context Protocol)](https://modelcontextprotocol.io) 서버로 감싼 패키지입니다. Claude Code, Claude Desktop 등 AI 어시스턴트에서 메타데이터 추출 도구를 바로 사용할 수 있습니다.
+
+<Callout>
+  별도 설치 없이 `npx web-meta-scraper-mcp`로 바로 실행할 수 있습니다.
+</Callout>
+
+## 클라이언트 설정
+
+<Tabs items={['Claude Code', 'Claude Desktop', 'Cursor']}>
+  <Tab>
+    ```bash
+    claude mcp add web-meta-scraper -- npx -y web-meta-scraper-mcp
+    ```
+  </Tab>
+  <Tab>
+    `claude_desktop_config.json`에 아래 설정을 추가합니다:
+
+    ```json
+    {
+      "mcpServers": {
+        "web-meta-scraper": {
+          "command": "npx",
+          "args": ["-y", "web-meta-scraper-mcp"]
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab>
+    Cursor Settings > MCP에서 아래 설정을 추가합니다:
+
+    ```json
+    {
+      "mcpServers": {
+        "web-meta-scraper": {
+          "command": "npx",
+          "args": ["-y", "web-meta-scraper-mcp"]
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## 제공 도구
+
+### `scrape_url`
+
+URL에서 메타데이터를 추출합니다. 모든 빌트인 플러그인(Open Graph, Twitter Cards, JSON-LD, meta tags)을 사용합니다.
+
+| 파라미터 | 타입 | 필수 | 설명 |
+|----------|------|------|------|
+| `url` | `string` | O | 스크래핑할 URL |
+
+**요청 예시:**
+
+```json
+{
+  "name": "scrape_url",
+  "arguments": {
+    "url": "https://github.com"
+  }
+}
+```
+
+**응답 예시:**
+
+```json
+{
+  "metadata": {
+    "title": "GitHub: Let's build from here",
+    "description": "GitHub is where over 100 million developers shape the future of software.",
+    "image": "https://github.githubassets.com/assets/social-card.png",
+    "url": "https://github.com",
+    "type": "website",
+    "siteName": "GitHub"
+  },
+  "sources": {
+    "meta-tags": { "title": "GitHub: Let's build from here" },
+    "open-graph": { "title": "GitHub: Let's build from here" },
+    "twitter": {},
+    "json-ld": {}
+  }
+}
+```
+
+### `scrape_html`
+
+HTML 문자열에서 메타데이터를 추출합니다. 이미 HTML 콘텐츠를 가지고 있을 때 유용합니다.
+
+| 파라미터 | 타입 | 필수 | 설명 |
+|----------|------|------|------|
+| `html` | `string` | O | 파싱할 HTML 문자열 |
+| `url` | `string` | X | 상대 경로(이미지, 파비콘 등)를 절대 경로로 변환할 기준 URL |
+
+**요청 예시:**
+
+```json
+{
+  "name": "scrape_html",
+  "arguments": {
+    "html": "<html><head><meta property=\"og:title\" content=\"Hello World\"/><meta property=\"og:image\" content=\"/img.png\"/></head></html>",
+    "url": "https://example.com"
+  }
+}
+```
+
+## 추출 항목
+
+서버는 모든 빌트인 플러그인을 사용하여 메타데이터를 추출합니다:
+
+| 플러그인 | 추출 필드 |
+|----------|-----------|
+| **Meta Tags** | `title`, `description`, `keywords`, `author`, `favicon`, `canonicalUrl` |
+| **Open Graph** | `og:title`, `og:description`, `og:image`, `og:url`, `og:type`, `og:site_name`, `og:locale` |
+| **Twitter Cards** | `twitter:title`, `twitter:description`, `twitter:image`, `twitter:card`, `twitter:site`, `twitter:creator` |
+| **JSON-LD** | 구조화된 데이터 (`Article`, `Product`, `Organization` 등) |
+
+필드는 [우선순위 기반 규칙](/docs/options#priority-based-merging)에 따라 자동으로 병합됩니다.
+
+## 로컬 개발
+
+```bash
+# 의존성 설치
+pnpm install
+
+# 빌드
+pnpm --filter web-meta-scraper-mcp build
+
+# MCP Inspector로 테스트
+npx @modelcontextprotocol/inspector node mcp/dist/index.js
+```

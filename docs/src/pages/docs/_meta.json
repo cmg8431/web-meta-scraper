@@ -5,5 +5,6 @@
   "plugins": "Plugins",
   "options": "Options",
   "custom-plugins": "Custom Plugins",
-  "error-handling": "Error Handling"
+  "error-handling": "Error Handling",
+  "mcp-server": "MCP Server"
 }
