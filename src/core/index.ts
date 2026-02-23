@@ -1,12 +1,8 @@
-import fetch from 'node-fetch';
-
-import { Plugin, ScraperOptions, Metadata, BaseMetadata } from '@/types';
+import type { BaseMetadata, Metadata, Plugin, ScraperOptions } from '@/types';
 import { toNormalizedText, toTruncatedText } from '@/utils';
 
 /**
  * Custom error class for scraper-specific errors
- * Extends the built-in Error class to provide better error handling
- * for metadata scraping operations
  */
 export class ScraperError extends Error {
   constructor(
@@ -19,14 +15,152 @@ export class ScraperError extends Error {
 }
 
 /**
- * Fetches HTML content with configurable request options.
- * Handles both direct HTML input and URL fetching with timeout and error handling.
- *
- * @param {string} input - URL or HTML content
- * @param {Partial<ScraperOptions>} options - Configuration options for the request
- * @returns {Promise<string>} The HTML content
- * @throws {ScraperError} When fetching fails or times out
+ * 메타데이터 우선순위 정의
+ * 높은 숫자 = 높은 우선순위
  */
+const PRIORITY_MAP = {
+  // 제목 우선순위: OpenGraph > Base > Twitter
+  title: { openGraph: 3, base: 2, twitter: 1 },
+  // 설명 우선순위: OpenGraph > Base > Twitter
+  description: { openGraph: 3, base: 2, twitter: 1 },
+  // 이미지 우선순위: OpenGraph > Twitter
+  image: { openGraph: 2, twitter: 1 },
+  // URL 우선순위: OpenGraph > Base
+  url: { openGraph: 2, base: 1 },
+};
+
+/**
+ * 중복된 메타데이터를 우선순위에 따라 병합
+ */
+function mergeMetadataByPriority(
+  metadata: Partial<Metadata>,
+): Record<string, any> {
+  const result: Record<string, any> = {};
+
+  // 각 필드별로 우선순위에 따라 병합
+  for (const [field, priorities] of Object.entries(PRIORITY_MAP)) {
+    let bestValue = null;
+    let highestPriority = 0;
+
+    // 각 소스에서 값 확인
+    for (const [source, priority] of Object.entries(priorities)) {
+      const sourceData = metadata[source as keyof Metadata] as Record<
+        string,
+        any
+      >;
+      const value = sourceData?.[field];
+
+      if (value && priority > highestPriority) {
+        bestValue = value;
+        highestPriority = priority;
+      }
+    }
+
+    if (bestValue) {
+      result[field] = bestValue;
+    }
+  }
+
+  // 고유한 필드들 추가
+  if (metadata.base?.author) {
+    result.author = metadata.base.author;
+  }
+  if (metadata.base?.keywords?.length) {
+    result.keywords = metadata.base.keywords;
+  }
+  if (metadata.base?.canonicalUrl) {
+    result.canonicalUrl = metadata.base.canonicalUrl;
+  }
+  if (metadata.base?.favicon) {
+    result.favicon = metadata.base.favicon;
+  }
+  if (metadata.openGraph?.type) {
+    result.type = metadata.openGraph.type;
+  }
+  if (metadata.openGraph?.siteName) {
+    result.siteName = metadata.openGraph.siteName;
+  }
+  if (metadata.openGraph?.locale) {
+    result.locale = metadata.openGraph.locale;
+  }
+  if (metadata.twitter?.card) {
+    result.twitterCard = metadata.twitter.card;
+  }
+  if (metadata.twitter?.site) {
+    result.twitterSite = metadata.twitter.site;
+  }
+  if (metadata.twitter?.creator) {
+    result.twitterCreator = metadata.twitter.creator;
+  }
+  if (metadata.jsonLd?.length) {
+    result.structuredData = metadata.jsonLd;
+  }
+
+  return result;
+}
+
+/**
+ * 빈 값들을 제거하는 헬퍼 함수
+ */
+function removeEmptyValues(obj: Record<string, any>): Record<string, any> {
+  const cleaned: Record<string, any> = {};
+
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined && value !== null && value !== '') {
+      if (Array.isArray(value)) {
+        if (value.length > 0) {
+          cleaned[key] = value;
+        }
+      } else if (typeof value === 'object') {
+        const cleanedNested = removeEmptyValues(value);
+        if (Object.keys(cleanedNested).length > 0) {
+          cleaned[key] = cleanedNested;
+        }
+      } else {
+        cleaned[key] = value;
+      }
+    }
+  }
+
+  return cleaned;
+}
+
+/**
+ * 폴백 값들을 적용하는 함수
+ */
+function applyFallbacks(metadata: Record<string, any>): Record<string, any> {
+  const result = { ...metadata };
+
+  // 제목이 없으면 사이트명 사용
+  if (!result.title && result.siteName) {
+    result.title = result.siteName;
+  }
+
+  // 설명이 없으면 구조화된 데이터에서 찾기
+  if (!result.description && result.structuredData?.length) {
+    for (const data of result.structuredData) {
+      if (data.description) {
+        result.description = data.description;
+        break;
+      }
+    }
+  }
+
+  // 이미지가 상대 경로면 절대 경로로 변환
+  if (result.image && result.url && result.image.startsWith('/')) {
+    const baseUrl = new URL(result.url).origin;
+    result.image = baseUrl + result.image;
+  }
+
+  // 파비콘도 마찬가지
+  if (result.favicon && result.url && result.favicon.startsWith('/')) {
+    const baseUrl = new URL(result.url).origin;
+    result.favicon = baseUrl + result.favicon;
+  }
+
+  return result;
+}
+
 async function getHtmlContent(
   input: string,
   options: Partial<ScraperOptions>,
@@ -77,13 +211,6 @@ async function getHtmlContent(
   }
 }
 
-/**
- * Creates initial metadata object with empty default values.
- * Includes raw metadata if extractRaw option is enabled.
- *
- * @param {Partial<ScraperOptions>} options - Scraper configuration options
- * @returns {Partial<Metadata>} Initial metadata structure
- */
 function createInitialMetadata(
   options: Partial<ScraperOptions>,
 ): Partial<Metadata> {
@@ -96,95 +223,73 @@ function createInitialMetadata(
   };
 }
 
-/**
- * Processes metadata text fields according to options.
- * Handles title and description normalization, truncation,
- * and secure image URL conversion.
- *
- * @param {Partial<Metadata>} metadata - The metadata to process
- * @param {Partial<ScraperOptions>} options - Processing options
- */
 function processMetadata(
-  metadata: Partial<Metadata>,
+  metadata: Record<string, any>,
   options: Partial<ScraperOptions>,
 ): void {
-  const { base } = metadata;
-  if (!base) {
-    return;
+  if (metadata.title) {
+    metadata.title = toNormalizedText(metadata.title);
   }
 
-  if (base.title) {
-    base.title = toNormalizedText(base.title);
-  }
-
-  if (base.description && options.maxDescriptionLength) {
-    base.description = toTruncatedText(
-      toNormalizedText(base.description),
+  if (metadata.description && options.maxDescriptionLength) {
+    metadata.description = toTruncatedText(
+      toNormalizedText(metadata.description),
       options.maxDescriptionLength,
     );
   }
 
-  if (options.secureImages && base.image?.startsWith('http:')) {
-    base.image = base.image.replace('http:', 'https:');
+  if (options.secureImages && metadata.image?.startsWith('http:')) {
+    metadata.image = metadata.image.replace('http:', 'https:');
   }
 }
 
-/**
- * Executes plugins in parallel and merges their results.
- *
- * @param {string} html - The HTML content to process
- * @param {Plugin[]} plugins - Array of metadata extraction plugins
- * @param {ScraperOptions} options - Configuration options
- * @returns {Promise<Partial<Metadata>>} Combined metadata from all plugins
- */
 async function executePlugins(
   html: string,
   plugins: Plugin[],
   options: ScraperOptions,
-): Promise<Partial<Metadata>> {
+): Promise<{ rawMetadata: Partial<Metadata>; allResults: any[] }> {
   const results = await Promise.all(
     plugins.map((plugin) => plugin(html, options)),
   );
 
-  return results.reduce<Partial<Metadata>>(
+  const rawMetadata = results.reduce<Partial<Metadata>>(
     (acc, curr) => ({
       ...acc,
       ...curr,
     }),
     createInitialMetadata(options),
   );
+
+  return { rawMetadata, allResults: results };
+}
+
+export interface ImprovedScraperOptions extends Partial<ScraperOptions> {
+  omitEmpty?: boolean; // 빈 값 제거
+  fallbacks?: boolean; // 폴백 값 적용
+  priorityOverride?: Record<string, Record<string, number>>; // 우선순위 커스터마이징
 }
 
 /**
- * Creates a metadata scraper function that extracts metadata using provided plugins.
- *
- * Features:
- * - Supports both URLs and direct HTML input
- * - Configurable timeout, user agent, and redirect handling
- * - Image URL security conversion
- * - Description length limiting
- * - Raw metadata extraction
- *
- * @param {Plugin[]} plugins - Array of metadata extraction plugins
- * @returns {(input: string, options?: Partial<ScraperOptions>) => Promise<Metadata>}
- * @throws {ScraperError} When metadata extraction fails
+ * 개선된 메타데이터 스크래퍼 생성 (항상 플랫 구조)
  *
  * @example
  * ```ts
- * const scraper = createScraper([jsonLd, openGraph]);
- * const metadata = await scraper('https://example.com', {
- *   maxDescriptionLength: 150,
- *   timeout: 5000,
- *   secureImages: true
- * });
+ * // 기본 사용 (플랫 구조, 빈 값 제거, 폴백 적용)
+ * const scraper = createScraper([jsonLd, openGraph, twitter]);
+ * const result = await scraper('https://example.com');
+ * // { title: "Example", description: "...", image: "...", price: "$99" }
+ *
+ * // 커스텀 플러그인과 함께
+ * const pricePlugin = (html) => ({ price: extractPrice(html) });
+ * const scraper = createScraper([metaTags, openGraph, pricePlugin]);
  * ```
  */
 export function createScraper(plugins: Plugin[] = []) {
   return async (
     input: string,
-    options: Partial<ScraperOptions> = {},
-  ): Promise<Metadata> => {
-    const defaultOptions: ScraperOptions = {
+    options: ImprovedScraperOptions = {},
+  ): Promise<any> => {
+    const defaultOptions: ScraperOptions & ImprovedScraperOptions = {
       maxDescriptionLength: 200,
       secureImages: true,
       timeout: 30000,
@@ -192,6 +297,9 @@ export function createScraper(plugins: Plugin[] = []) {
       followRedirects: true,
       validateUrls: true,
       extractRaw: false,
+      // 새로운 기본값들
+      omitEmpty: true,
+      fallbacks: true,
     };
 
     const mergedOptions = { ...defaultOptions, ...options };
@@ -205,10 +313,40 @@ export function createScraper(plugins: Plugin[] = []) {
       }
 
       const html = await getHtmlContent(input, mergedOptions);
-      const metadata = await executePlugins(html, plugins, mergedOptions);
-      processMetadata(metadata, mergedOptions);
+      const { rawMetadata } = await executePlugins(
+        html,
+        plugins,
+        mergedOptions,
+      );
 
-      return metadata as Metadata;
+      // 플랫 구조로 병합
+      let result = mergeMetadataByPriority(rawMetadata);
+
+      // 커스텀 플러그인 결과 병합 (플러그인에서 직접 반환한 값들)
+      for (const pluginResult of await Promise.all(
+        plugins.map((plugin) => plugin(html, mergedOptions)),
+      )) {
+        // base, openGraph, twitter 외의 필드들은 직접 추가
+        for (const [key, value] of Object.entries(pluginResult)) {
+          if (!['base', 'openGraph', 'twitter', 'jsonLd'].includes(key)) {
+            if (value != null) {
+              result[key] = value;
+            }
+          }
+        }
+      }
+
+      if (mergedOptions.omitEmpty) {
+        result = removeEmptyValues(result);
+      }
+
+      if (mergedOptions.fallbacks) {
+        result = applyFallbacks(result);
+      }
+
+      processMetadata(result, mergedOptions);
+
+      return result;
     } catch (error) {
       if (error instanceof ScraperError) {
         throw error;

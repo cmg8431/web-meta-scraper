@@ -1,4 +1,4 @@
-import { CheerioAPI, load, Cheerio } from 'cheerio';
+import { type Cheerio, type CheerioAPI, load } from 'cheerio';
 
 /**
  * Creates a CheerioAPI instance from an HTML string.

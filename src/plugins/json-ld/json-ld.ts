@@ -1,4 +1,4 @@
-import { JsonLdMetadata } from '@/types';
+import type { JsonLdMetadata } from '@/types';
 import { getCheerioDoc, getText } from '@/utils';
 
 /**

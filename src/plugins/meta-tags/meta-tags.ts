@@ -1,8 +1,8 @@
-import { CheerioAPI } from 'cheerio';
+import type { CheerioAPI } from 'cheerio';
 
-import { Plugin, Metadata, BaseMetadata } from '@/types';
+import type { BaseMetadata, Metadata, Plugin } from '@/types';
 import { toSecureUrl } from '@/utils';
-import { getCheerioDoc, getText, getAttr } from '@/utils/dom';
+import { getAttr, getCheerioDoc, getText } from '@/utils/dom';
 
 /**
  * Extracts and processes HTML metadata from various meta tags.

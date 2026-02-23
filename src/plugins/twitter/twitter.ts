@@ -1,8 +1,13 @@
-import { CheerioAPI } from 'cheerio';
+import type { CheerioAPI } from 'cheerio';
 
-import { Plugin, Metadata, TwitterMetadata, ScraperOptions } from '@/types';
+import type {
+  Metadata,
+  Plugin,
+  ScraperOptions,
+  TwitterMetadata,
+} from '@/types';
 import { toSecureUrl, toTruncatedText } from '@/utils';
-import { getCheerioDoc, getAttr } from '@/utils/dom';
+import { getAttr, getCheerioDoc } from '@/utils/dom';
 
 /**
  * Extracts Twitter card metadata from meta tags.

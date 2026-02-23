@@ -1,5 +1,5 @@
-import { Metadata } from './metadata';
-import { ScraperOptions } from './options';
+import type { Metadata } from './metadata';
+import type { ScraperOptions } from './options';
 
 export type Plugin = (
   html: string,
