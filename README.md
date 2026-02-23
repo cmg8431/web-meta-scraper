@@ -110,12 +110,38 @@ const result = await scraper.scrape(html, { url: 'https://example.com' });
 | **Twitter Cards** | `twitter` | `twitter:title`, `twitter:description`, `twitter:image`, `twitter:card`, `twitter:site`, `twitter:creator` |
 | **JSON-LD** | `jsonLd` | Structured data (`Article`, `Product`, `Organization`, `FAQPage`, `BreadcrumbList`, etc.) |
 | **oEmbed** | `oembed` | oEmbed data (`title`, `author_name`, `thumbnail_url`, `html`, etc.) |
+| **Favicons** | `favicons` | All icon links (`icon`, `apple-touch-icon`, `mask-icon`, `manifest`) with `sizes` and `type` |
+| **Feeds** | `feeds` | RSS (`application/rss+xml`) and Atom (`application/atom+xml`) feed links with `title` |
+| **Robots** | `robots` | Robots meta directives (`noindex`, `nofollow`, `noarchive`, `nosnippet`, etc.) with indexability flags |
 
 ```typescript
 // Use only what you need
 const scraper = createScraper({
   plugins: [openGraph, twitter],
 });
+```
+
+> **Note:** The `scrape()` shorthand uses only the core plugins (`metaTags`, `openGraph`, `twitter`, `jsonLd`) by default. To use `favicons`, `feeds`, or `robots`, pass them explicitly via `createScraper()`.
+
+## Batch Scraping
+
+Scrape multiple URLs concurrently with `batchScrape()`. Uses a promise-based worker pool with no external dependencies. Each URL is processed independently — one failure won't stop the rest.
+
+```typescript
+import { batchScrape } from 'web-meta-scraper';
+
+const results = await batchScrape(
+  ['https://example.com', 'https://github.com', 'https://nodejs.org'],
+  { concurrency: 3 },
+);
+
+for (const r of results) {
+  if (r.success) {
+    console.log(r.url, r.result.metadata.title);
+  } else {
+    console.error(r.url, r.error);
+  }
+}
 ```
 
 ## Priority-Based Merging
@@ -264,8 +290,13 @@ Add to your config file:
 
 | Tool | Description |
 |------|-------------|
-| `scrape_url` | Extract metadata from a URL (Open Graph, Twitter Cards, JSON-LD, meta tags) |
+| `scrape_url` | Extract metadata from a URL (Open Graph, Twitter Cards, JSON-LD, meta tags, favicons, feeds, robots) |
 | `scrape_html` | Extract metadata from raw HTML string with optional base URL for resolving relative paths |
+| `batch_scrape` | Scrape metadata from multiple URLs concurrently |
+| `detect_feeds` | Detect RSS and Atom feed links from a web page |
+| `check_robots` | Check robots meta tag directives and indexing status |
+| `validate_metadata` | Validate metadata quality and generate an SEO score report |
+| `extract_content` | Extract main text content from a web page |
 
 See the [MCP package README](./mcp/README.md) for detailed usage and examples.
 

@@ -3,6 +3,7 @@
   "installation": "설치",
   "quick-start": "빠른 시작",
   "plugins": "플러그인",
+  "batch-scraping": "배치 스크래핑",
   "options": "설정",
   "custom-plugins": "커스텀 플러그인",
   "error-handling": "에러 처리",

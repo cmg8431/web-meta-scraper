@@ -1,0 +1,96 @@
+# 배치 스크래핑
+
+`batchScrape()` 함수를 사용하면 여러 URL에서 메타데이터를 동시에 추출할 수 있습니다. 에러 격리와 순서 보장이 내장되어 있습니다.
+
+## 기본 사용법
+
+```typescript
+import { batchScrape } from 'web-meta-scraper';
+
+const results = await batchScrape([
+  'https://github.com',
+  'https://nodejs.org',
+  'https://example.com',
+]);
+
+for (const r of results) {
+  if (r.success) {
+    console.log(r.url, r.result.metadata.title);
+  } else {
+    console.error(r.url, r.error);
+  }
+}
+```
+
+## 옵션
+
+```typescript
+interface BatchScrapeOptions {
+  concurrency?: number;   // 최대 병렬 요청 수 (기본값: 5)
+  scraper?: ScraperConfig; // 각 scrape() 호출에 전달
+}
+```
+
+### 동시성
+
+병렬로 가져올 URL 수를 제어합니다:
+
+```typescript
+// 보수적 — 한 번에 2개
+const results = await batchScrape(urls, { concurrency: 2 });
+
+// 적극적 — 한 번에 10개
+const results = await batchScrape(urls, { concurrency: 10 });
+```
+
+### 커스텀 스크래퍼 설정
+
+플러그인, fetch 옵션, 후처리 설정을 전달할 수 있습니다:
+
+```typescript
+import { batchScrape, metaTags, openGraph, favicons, feeds } from 'web-meta-scraper';
+
+const results = await batchScrape(urls, {
+  concurrency: 5,
+  scraper: {
+    plugins: [metaTags, openGraph, favicons, feeds],
+    fetch: { timeout: 10000 },
+    postProcess: { secureImages: true },
+  },
+});
+```
+
+## 결과 구조
+
+반환 배열의 각 요소는 `BatchScrapeResult`입니다:
+
+```typescript
+interface BatchScrapeResult {
+  url: string;              // 스크래핑한 URL
+  success: boolean;         // 에러 없이 완료되었는지 여부
+  result?: ScraperResult;   // 전체 스크래퍼 출력 (성공 시)
+  error?: string;           // 에러 메시지 (실패 시)
+}
+```
+
+결과는 개별 요청의 완료 순서와 관계없이 항상 입력 URL과 같은 순서로 반환됩니다.
+
+## 에러 격리
+
+각 URL은 독립적으로 처리됩니다. 하나의 URL 실패가 나머지에 영향을 주지 않습니다:
+
+```typescript
+const results = await batchScrape([
+  'https://valid-site.com',       // 성공
+  'https://does-not-exist.xyz',   // 실패 — 나머지는 계속 진행
+  'https://another-valid.com',    // 성공
+]);
+
+// results[0].success === true
+// results[1].success === false, results[1].error === "..."
+// results[2].success === true
+```
+
+## 동작 방식
+
+`batchScrape`는 외부 의존성 없는 Promise 기반 워커 풀을 사용합니다. 최대 `concurrency`개의 병렬 워커를 생성하여 공유 인덱스 카운터에서 URL을 가져옵니다. JavaScript는 싱글 스레드이므로 공유 인덱스는 경쟁 조건으로부터 안전합니다.

@@ -50,43 +50,11 @@ import { Tabs, Tab, Callout } from 'nextra/components';
 
 ### `scrape_url`
 
-Extract metadata from a URL. Uses all built-in plugins (Open Graph, Twitter Cards, JSON-LD, meta tags).
+Extract metadata from a URL. Uses all built-in plugins including favicons, feeds, and robots.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `url` | `string` | Yes | The URL to scrape metadata from |
-
-**Example request:**
-
-```json
-{
-  "name": "scrape_url",
-  "arguments": {
-    "url": "https://github.com"
-  }
-}
-```
-
-**Example response:**
-
-```json
-{
-  "metadata": {
-    "title": "GitHub: Let's build from here",
-    "description": "GitHub is where over 100 million developers shape the future of software.",
-    "image": "https://github.githubassets.com/assets/social-card.png",
-    "url": "https://github.com",
-    "type": "website",
-    "siteName": "GitHub"
-  },
-  "sources": {
-    "meta-tags": { "title": "GitHub: Let's build from here" },
-    "open-graph": { "title": "GitHub: Let's build from here" },
-    "twitter": {},
-    "json-ld": {}
-  }
-}
-```
 
 ### `scrape_html`
 
@@ -97,21 +65,70 @@ Extract metadata from a raw HTML string. Useful when you already have the HTML c
 | `html` | `string` | Yes | The raw HTML string to extract metadata from |
 | `url` | `string` | No | Base URL for resolving relative paths (e.g. images, favicons) |
 
+### `batch_scrape`
+
+Scrape metadata from multiple URLs concurrently. Each URL is processed independently — one failure won't stop the rest.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `urls` | `string[]` | Yes | List of URLs to scrape |
+| `concurrency` | `number` | No | Number of concurrent requests (default: 5, max: 20) |
+
 **Example request:**
 
 ```json
 {
-  "name": "scrape_html",
+  "name": "batch_scrape",
   "arguments": {
-    "html": "<html><head><meta property=\"og:title\" content=\"Hello World\"/><meta property=\"og:image\" content=\"/img.png\"/></head></html>",
-    "url": "https://example.com"
+    "urls": ["https://github.com", "https://nodejs.org"],
+    "concurrency": 3
   }
 }
 ```
 
+### `detect_feeds`
+
+Detect RSS and Atom feed links from a web page.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | `string` | No | URL to detect feeds from |
+| `html` | `string` | No | Raw HTML string to detect feeds from |
+
+One of `url` or `html` is required.
+
+### `check_robots`
+
+Check robots meta tag directives and indexing status of a web page.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | `string` | No | URL to check robots directives from |
+| `html` | `string` | No | Raw HTML string to check robots directives from |
+
+One of `url` or `html` is required.
+
+### `validate_metadata`
+
+Validate metadata quality and generate an SEO score report (100-point scale) with categorized issues.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | `string` | No | URL to scrape and validate metadata from |
+| `html` | `string` | No | Raw HTML string to validate metadata from |
+
+### `extract_content`
+
+Extract main text content from a web page (removes navigation, ads, sidebars).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | `string` | No | URL to extract content from |
+| `html` | `string` | No | Raw HTML string to extract content from |
+
 ## Extracted Metadata
 
-The server extracts metadata using all built-in plugins:
+The MCP server enables all built-in plugins by default:
 
 | Plugin | Fields |
 |--------|--------|
@@ -119,8 +136,11 @@ The server extracts metadata using all built-in plugins:
 | **Open Graph** | `og:title`, `og:description`, `og:image`, `og:url`, `og:type`, `og:site_name`, `og:locale` |
 | **Twitter Cards** | `twitter:title`, `twitter:description`, `twitter:image`, `twitter:card`, `twitter:site`, `twitter:creator` |
 | **JSON-LD** | Structured data (`Article`, `Product`, `Organization`, etc.) |
+| **Favicons** | All icon links with `sizes` and `type` |
+| **Feeds** | RSS and Atom feed links with `title` |
+| **Robots** | Robots meta directives and indexability flags |
 
-Fields are automatically merged using [priority-based rules](/docs/options#priority-based-merging).
+Fields are automatically merged using [priority-based rules](/docs/options#custom-resolve-rules).
 
 ## Local Development
 

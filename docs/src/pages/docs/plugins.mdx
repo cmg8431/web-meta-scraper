@@ -128,6 +128,121 @@ console.log(result.metadata.oembed);
 // { type: "video", title: "...", author_name: "...", html: "<iframe ...>" }
 ```
 
+## Favicons
+
+Discovers all favicon and icon references in an HTML document, including standard icons, Apple touch icons, mask icons, and web app manifest links.
+
+```typescript
+import { createScraper, favicons } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [favicons] });
+```
+
+**Extracted fields:**
+
+Returns a `favicons` array of `FaviconEntry` objects:
+
+| Field | Description |
+| --- | --- |
+| `url` | Fully resolved URL of the icon resource |
+| `sizes` | Icon dimensions from the `sizes` attribute (e.g. `"180x180"`) |
+| `type` | MIME type (e.g. `"image/png"`) or `"manifest"` for web app manifest links |
+
+**Scanned selectors:**
+
+- `link[rel="icon"]`
+- `link[rel="shortcut icon"]`
+- `link[rel="apple-touch-icon"]`
+- `link[rel="apple-touch-icon-precomposed"]`
+- `link[rel="mask-icon"]`
+- `link[rel="manifest"]` (recorded with `type: "manifest"`)
+
+Relative URLs are resolved against the page URL. Duplicate URLs are automatically deduplicated.
+
+```typescript
+const result = await scraper.scrapeUrl('https://example.com');
+console.log(result.metadata.favicons);
+// [
+//   { url: "https://example.com/favicon.ico" },
+//   { url: "https://example.com/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+//   { url: "https://example.com/manifest.json", type: "manifest" },
+// ]
+```
+
+## Feeds
+
+Detects RSS and Atom feed links declared in the HTML `<head>`.
+
+```typescript
+import { createScraper, feeds } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [feeds] });
+```
+
+**Extracted fields:**
+
+Returns a `feeds` array of `FeedEntry` objects:
+
+| Field | Description |
+| --- | --- |
+| `url` | Fully resolved URL of the feed |
+| `title` | Human-readable title from the `title` attribute |
+| `type` | `"rss"` for RSS 2.0 feeds, `"atom"` for Atom feeds |
+
+**Scanned selectors:**
+
+- `link[rel="alternate"][type="application/rss+xml"]` → type `"rss"`
+- `link[rel="alternate"][type="application/atom+xml"]` → type `"atom"`
+
+```typescript
+const result = await scraper.scrapeUrl('https://example.com/blog');
+console.log(result.metadata.feeds);
+// [
+//   { url: "https://example.com/feed.xml", title: "Blog RSS", type: "rss" },
+//   { url: "https://example.com/atom.xml", title: "Blog Atom", type: "atom" },
+// ]
+```
+
+## Robots
+
+Extracts and interprets robots meta tag directives to determine indexing and crawl permissions.
+
+```typescript
+import { createScraper, robots } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [robots] });
+```
+
+**Extracted fields:**
+
+Returns a `robots` object of type `RobotsInfo`:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `directives` | `Array` | Raw directive entries from all robots-related meta tags |
+| `isIndexable` | `boolean` | `true` if the page allows indexing (no `noindex` or `none`) |
+| `isFollowable` | `boolean` | `true` if the page allows link following (no `nofollow` or `none`) |
+| `noarchive` | `boolean` | Whether caching/archiving is prohibited |
+| `nosnippet` | `boolean` | Whether search result snippets are prohibited |
+| `noimageindex` | `boolean` | Whether image indexing is prohibited |
+| `notranslate` | `boolean` | Whether automatic translation is prohibited |
+
+Scans `<meta name="robots">` and bot-specific variants like `<meta name="googlebot">`. The boolean flags are derived from the generic `robots` tag only. Bot-specific directives are preserved in the `directives` array.
+
+```typescript
+const result = await scraper.scrapeUrl('https://example.com');
+console.log(result.metadata.robots);
+// {
+//   directives: [{ content: "noindex, nofollow", botName: "robots" }],
+//   isIndexable: false,
+//   isFollowable: false,
+//   noarchive: false,
+//   nosnippet: false,
+//   noimageindex: false,
+//   notranslate: false,
+// }
+```
+
 ## Combining Plugins
 
 Plugins run in parallel via `Promise.all`. The order in the array does not affect priority — that's determined by the [resolve rules](/docs/options#custom-resolve-rules).

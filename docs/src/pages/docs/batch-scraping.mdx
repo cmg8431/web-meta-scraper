@@ -1,0 +1,96 @@
+# Batch Scraping
+
+The `batchScrape()` function lets you scrape metadata from multiple URLs concurrently with built-in error isolation and order preservation.
+
+## Basic Usage
+
+```typescript
+import { batchScrape } from 'web-meta-scraper';
+
+const results = await batchScrape([
+  'https://github.com',
+  'https://nodejs.org',
+  'https://example.com',
+]);
+
+for (const r of results) {
+  if (r.success) {
+    console.log(r.url, r.result.metadata.title);
+  } else {
+    console.error(r.url, r.error);
+  }
+}
+```
+
+## Options
+
+```typescript
+interface BatchScrapeOptions {
+  concurrency?: number;   // Max parallel requests (default: 5)
+  scraper?: ScraperConfig; // Forwarded to each scrape() call
+}
+```
+
+### Concurrency
+
+Control how many URLs are fetched in parallel:
+
+```typescript
+// Conservative — 2 at a time
+const results = await batchScrape(urls, { concurrency: 2 });
+
+// Aggressive — 10 at a time
+const results = await batchScrape(urls, { concurrency: 10 });
+```
+
+### Custom Scraper Config
+
+Pass plugins, fetch options, or post-processing settings:
+
+```typescript
+import { batchScrape, metaTags, openGraph, favicons, feeds } from 'web-meta-scraper';
+
+const results = await batchScrape(urls, {
+  concurrency: 5,
+  scraper: {
+    plugins: [metaTags, openGraph, favicons, feeds],
+    fetch: { timeout: 10000 },
+    postProcess: { secureImages: true },
+  },
+});
+```
+
+## Result Structure
+
+Each element in the returned array is a `BatchScrapeResult`:
+
+```typescript
+interface BatchScrapeResult {
+  url: string;              // The URL that was scraped
+  success: boolean;         // Whether the scrape completed without errors
+  result?: ScraperResult;   // Full scraper output (on success)
+  error?: string;           // Error message (on failure)
+}
+```
+
+Results are always returned in the same order as the input URLs, regardless of the order in which individual requests complete.
+
+## Error Isolation
+
+Each URL is processed independently. A failure in one URL does not affect the others:
+
+```typescript
+const results = await batchScrape([
+  'https://valid-site.com',       // success
+  'https://does-not-exist.xyz',   // fails — others continue
+  'https://another-valid.com',    // success
+]);
+
+// results[0].success === true
+// results[1].success === false, results[1].error === "..."
+// results[2].success === true
+```
+
+## How It Works
+
+`batchScrape` uses a promise-based worker pool with no external dependencies. It spawns up to `concurrency` parallel workers that pull URLs from a shared index counter. Since JavaScript is single-threaded, the shared index is safe from race conditions.

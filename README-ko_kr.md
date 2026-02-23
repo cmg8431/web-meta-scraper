@@ -110,12 +110,38 @@ const result = await scraper.scrape(html, { url: 'https://example.com' });
 | **Twitter Cards** | `twitter` | `twitter:title`, `twitter:description`, `twitter:image`, `twitter:card`, `twitter:site`, `twitter:creator` |
 | **JSON-LD** | `jsonLd` | 구조화된 데이터 (`Article`, `Product`, `Organization`, `FAQPage`, `BreadcrumbList` 등) |
 | **oEmbed** | `oembed` | oEmbed 데이터 (`title`, `author_name`, `thumbnail_url`, `html` 등) |
+| **Favicons** | `favicons` | 모든 아이콘 링크 (`icon`, `apple-touch-icon`, `mask-icon`, `manifest`) + `sizes`, `type` |
+| **Feeds** | `feeds` | RSS (`application/rss+xml`) 및 Atom (`application/atom+xml`) 피드 링크 + `title` |
+| **Robots** | `robots` | Robots 메타 디렉티브 (`noindex`, `nofollow`, `noarchive`, `nosnippet` 등) + 인덱싱 가능 여부 플래그 |
 
 ```typescript
 // 필요한 것만 사용
 const scraper = createScraper({
   plugins: [openGraph, twitter],
 });
+```
+
+> **참고:** `scrape()` 단축 함수는 기본적으로 코어 플러그인(`metaTags`, `openGraph`, `twitter`, `jsonLd`)만 사용합니다. `favicons`, `feeds`, `robots`를 사용하려면 `createScraper()`에 명시적으로 전달하세요.
+
+## 배치 스크래핑
+
+`batchScrape()`로 여러 URL을 동시에 스크래핑할 수 있습니다. 외부 의존성 없는 Promise 기반 워커 풀을 사용합니다. 각 URL은 독립적으로 처리되어 하나의 실패가 나머지에 영향을 주지 않습니다.
+
+```typescript
+import { batchScrape } from 'web-meta-scraper';
+
+const results = await batchScrape(
+  ['https://example.com', 'https://github.com', 'https://nodejs.org'],
+  { concurrency: 3 },
+);
+
+for (const r of results) {
+  if (r.success) {
+    console.log(r.url, r.result.metadata.title);
+  } else {
+    console.error(r.url, r.error);
+  }
+}
 ```
 
 ## 우선순위 기반 병합
@@ -264,8 +290,13 @@ claude mcp add web-meta-scraper -- npx -y web-meta-scraper-mcp
 
 | 도구 | 설명 |
 |------|------|
-| `scrape_url` | URL에서 메타데이터 추출 (Open Graph, Twitter Cards, JSON-LD, meta tags) |
+| `scrape_url` | URL에서 메타데이터 추출 (Open Graph, Twitter Cards, JSON-LD, meta tags, favicons, feeds, robots) |
 | `scrape_html` | HTML 문자열에서 메타데이터 추출 (상대 경로 해석을 위한 기준 URL 옵션 제공) |
+| `batch_scrape` | 여러 URL에서 메타데이터를 동시에 추출 |
+| `detect_feeds` | 웹 페이지에서 RSS/Atom 피드 링크 감지 |
+| `check_robots` | robots 메타 태그 디렉티브 및 인덱싱 상태 확인 |
+| `validate_metadata` | 메타데이터 품질 검증 및 SEO 점수 리포트 생성 |
+| `extract_content` | 웹 페이지에서 본문 텍스트 추출 |
 
 자세한 사용법과 예시는 [MCP 패키지 README](./mcp/README.md)를 참고하세요.
 

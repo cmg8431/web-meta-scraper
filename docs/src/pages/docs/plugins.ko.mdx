@@ -128,6 +128,121 @@ console.log(result.metadata.oembed);
 // { type: "video", title: "...", author_name: "...", html: "<iframe ...>" }
 ```
 
+## Favicons
+
+HTML 문서에서 모든 파비콘과 아이콘 참조를 탐색합니다. 표준 아이콘, Apple 터치 아이콘, 마스크 아이콘, 웹 앱 매니페스트 링크를 포함합니다.
+
+```typescript
+import { createScraper, favicons } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [favicons] });
+```
+
+**추출 필드:**
+
+`FaviconEntry` 객체의 `favicons` 배열을 반환합니다:
+
+| 필드 | 설명 |
+| --- | --- |
+| `url` | 완전히 해석된 아이콘 리소스 URL |
+| `sizes` | `sizes` 속성의 아이콘 크기 (예: `"180x180"`) |
+| `type` | MIME 타입 (예: `"image/png"`) 또는 매니페스트 링크의 경우 `"manifest"` |
+
+**스캔 셀렉터:**
+
+- `link[rel="icon"]`
+- `link[rel="shortcut icon"]`
+- `link[rel="apple-touch-icon"]`
+- `link[rel="apple-touch-icon-precomposed"]`
+- `link[rel="mask-icon"]`
+- `link[rel="manifest"]` (`type: "manifest"`로 기록)
+
+상대 URL은 페이지 URL 기준으로 해석됩니다. 중복 URL은 자동으로 제거됩니다.
+
+```typescript
+const result = await scraper.scrapeUrl('https://example.com');
+console.log(result.metadata.favicons);
+// [
+//   { url: "https://example.com/favicon.ico" },
+//   { url: "https://example.com/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+//   { url: "https://example.com/manifest.json", type: "manifest" },
+// ]
+```
+
+## Feeds
+
+HTML `<head>`에 선언된 RSS와 Atom 피드 링크를 감지합니다.
+
+```typescript
+import { createScraper, feeds } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [feeds] });
+```
+
+**추출 필드:**
+
+`FeedEntry` 객체의 `feeds` 배열을 반환합니다:
+
+| 필드 | 설명 |
+| --- | --- |
+| `url` | 완전히 해석된 피드 URL |
+| `title` | `title` 속성의 사람이 읽을 수 있는 제목 |
+| `type` | RSS 2.0 피드는 `"rss"`, Atom 피드는 `"atom"` |
+
+**스캔 셀렉터:**
+
+- `link[rel="alternate"][type="application/rss+xml"]` → type `"rss"`
+- `link[rel="alternate"][type="application/atom+xml"]` → type `"atom"`
+
+```typescript
+const result = await scraper.scrapeUrl('https://example.com/blog');
+console.log(result.metadata.feeds);
+// [
+//   { url: "https://example.com/feed.xml", title: "Blog RSS", type: "rss" },
+//   { url: "https://example.com/atom.xml", title: "Blog Atom", type: "atom" },
+// ]
+```
+
+## Robots
+
+robots 메타 태그 디렉티브를 추출하고 해석하여 인덱싱 및 크롤링 권한을 확인합니다.
+
+```typescript
+import { createScraper, robots } from 'web-meta-scraper';
+
+const scraper = createScraper({ plugins: [robots] });
+```
+
+**추출 필드:**
+
+`RobotsInfo` 타입의 `robots` 객체를 반환합니다:
+
+| 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| `directives` | `Array` | 모든 robots 관련 메타 태그의 원시 디렉티브 항목 |
+| `isIndexable` | `boolean` | 페이지가 인덱싱을 허용하면 `true` (`noindex`나 `none` 없음) |
+| `isFollowable` | `boolean` | 페이지가 링크 팔로우를 허용하면 `true` (`nofollow`나 `none` 없음) |
+| `noarchive` | `boolean` | 캐싱/아카이빙이 금지되었는지 여부 |
+| `nosnippet` | `boolean` | 검색 결과 스니펫이 금지되었는지 여부 |
+| `noimageindex` | `boolean` | 이미지 인덱싱이 금지되었는지 여부 |
+| `notranslate` | `boolean` | 자동 번역이 금지되었는지 여부 |
+
+`<meta name="robots">`와 `<meta name="googlebot">` 같은 봇별 변형을 스캔합니다. 불리언 플래그는 일반 `robots` 태그에서만 파생됩니다. 봇별 디렉티브는 `directives` 배열에 보존됩니다.
+
+```typescript
+const result = await scraper.scrapeUrl('https://example.com');
+console.log(result.metadata.robots);
+// {
+//   directives: [{ content: "noindex, nofollow", botName: "robots" }],
+//   isIndexable: false,
+//   isFollowable: false,
+//   noarchive: false,
+//   nosnippet: false,
+//   noimageindex: false,
+//   notranslate: false,
+// }
+```
+
 ## 플러그인 조합
 
 플러그인은 `Promise.all`로 병렬 실행됩니다. 배열 순서는 우선순위에 영향을 주지 않습니다 — [리졸브 규칙](/ko/docs/options#커스텀-리졸브-규칙)이 우선순위를 결정합니다.

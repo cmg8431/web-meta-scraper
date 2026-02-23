@@ -3,17 +3,19 @@
 [![npm version](https://img.shields.io/npm/v/web-meta-scraper-mcp)](https://www.npmjs.com/package/web-meta-scraper-mcp)
 [![license](https://img.shields.io/npm/l/web-meta-scraper-mcp)](https://github.com/cmg8431/web-meta-scraper/blob/main/LICENSE)
 
-[web-meta-scraper](https://github.com/cmg8431/web-meta-scraper)를 [MCP(Model Context Protocol)](https://modelcontextprotocol.io) 서버로 감싼 패키지입니다. Claude Code, Claude Desktop 등 MCP 클라이언트에서 URL 메타데이터 추출 도구를 바로 사용할 수 있습니다.
+English | [한국어](./README-ko_kr.md)
 
-## 설치 & 실행
+An [MCP (Model Context Protocol)](https://modelcontextprotocol.io) server that wraps [web-meta-scraper](https://github.com/cmg8431/web-meta-scraper). Use URL metadata extraction tools directly from MCP clients like Claude Code, Claude Desktop, and Cursor.
 
-별도 설치 없이 `npx`로 바로 실행할 수 있습니다.
+## Setup & Run
+
+Run directly with `npx` — no installation required.
 
 ```bash
 npx web-meta-scraper-mcp
 ```
 
-## MCP 클라이언트 설정
+## MCP Client Configuration
 
 ### Claude Code
 
@@ -23,7 +25,7 @@ claude mcp add web-meta-scraper -- npx -y web-meta-scraper-mcp
 
 ### Claude Desktop
 
-`claude_desktop_config.json`에 아래 설정을 추가합니다.
+Add to your `claude_desktop_config.json`:
 
 ```json
 {
@@ -38,7 +40,7 @@ claude mcp add web-meta-scraper -- npx -y web-meta-scraper-mcp
 
 ### Cursor
 
-Cursor Settings > MCP에서 아래 설정을 추가합니다.
+Add to Cursor Settings > MCP:
 
 ```json
 {
@@ -51,17 +53,17 @@ Cursor Settings > MCP에서 아래 설정을 추가합니다.
 }
 ```
 
-## 제공 도구
+## Available Tools
 
 ### `scrape_url`
 
-URL에서 메타데이터를 추출합니다.
+Extract metadata from a URL.
 
-| 파라미터 | 타입 | 필수 | 설명 |
-|----------|------|------|------|
-| `url` | `string` | O | 스크래핑할 URL |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | `string` | Yes | The URL to scrape metadata from |
 
-**요청 예시:**
+**Example request:**
 
 ```json
 {
@@ -72,7 +74,7 @@ URL에서 메타데이터를 추출합니다.
 }
 ```
 
-**응답 예시:**
+**Example response:**
 
 ```json
 {
@@ -95,50 +97,86 @@ URL에서 메타데이터를 추출합니다.
 
 ### `scrape_html`
 
-HTML 문자열에서 메타데이터를 추출합니다.
+Extract metadata from a raw HTML string.
 
-| 파라미터 | 타입 | 필수 | 설명 |
-|----------|------|------|------|
-| `html` | `string` | O | 파싱할 HTML 문자열 |
-| `url` | `string` | X | 상대 경로를 절대 경로로 변환할 기준 URL |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `html` | `string` | Yes | The raw HTML string to extract metadata from |
+| `url` | `string` | No | Base URL for resolving relative paths |
 
-**요청 예시:**
+### `batch_scrape`
 
-```json
-{
-  "name": "scrape_html",
-  "arguments": {
-    "html": "<html><head><meta property=\"og:title\" content=\"Hello World\"/></head></html>",
-    "url": "https://example.com"
-  }
-}
-```
+Scrape metadata from multiple URLs concurrently.
 
-## 추출 항목
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `urls` | `string[]` | Yes | List of URLs to scrape |
+| `concurrency` | `number` | No | Number of concurrent requests (default: 5, max: 20) |
 
-아래 메타데이터를 자동으로 추출하고, 우선순위 기반으로 병합합니다.
+### `detect_feeds`
 
-| 플러그인 | 추출 항목 |
-|----------|-----------|
+Detect RSS and Atom feed links from a web page.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | `string` | No | URL to detect feeds from |
+| `html` | `string` | No | Raw HTML string to detect feeds from |
+
+### `check_robots`
+
+Check robots meta tag directives and indexing status.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | `string` | No | URL to check robots directives from |
+| `html` | `string` | No | Raw HTML string to check robots directives from |
+
+### `validate_metadata`
+
+Validate metadata quality and generate an SEO score report (100-point scale).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | `string` | No | URL to validate metadata from |
+| `html` | `string` | No | Raw HTML string to validate metadata from |
+
+### `extract_content`
+
+Extract main text content from a web page (removes navigation, ads, sidebars).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | `string` | No | URL to extract content from |
+| `html` | `string` | No | Raw HTML string to extract content from |
+
+## Extracted Metadata
+
+The server automatically extracts and merges metadata from all built-in plugins using priority-based rules:
+
+| Plugin | Fields |
+|--------|--------|
 | **Meta Tags** | `title`, `description`, `keywords`, `author`, `favicon`, `canonicalUrl` |
 | **Open Graph** | `og:title`, `og:description`, `og:image`, `og:url`, `og:type`, `og:site_name`, `og:locale` |
 | **Twitter Cards** | `twitter:title`, `twitter:description`, `twitter:image`, `twitter:card`, `twitter:site`, `twitter:creator` |
-| **JSON-LD** | 구조화된 데이터 (`Article`, `Product`, `Organization` 등) |
+| **JSON-LD** | Structured data (`Article`, `Product`, `Organization`, etc.) |
+| **Favicons** | All icon links with `sizes` and `type` |
+| **Feeds** | RSS and Atom feed links with `title` |
+| **Robots** | Robots meta directives and indexability flags |
 
-## 로컬 개발
+## Local Development
 
 ```bash
-# 의존성 설치
+# Install dependencies
 pnpm install
 
-# 빌드
+# Build
 pnpm --filter web-meta-scraper-mcp build
 
-# 도구 목록 확인
+# List tools
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0.0"}}}
 {"jsonrpc":"2.0","id":2,"method":"tools/list"}' | node mcp/dist/index.js
 
-# MCP Inspector로 테스트
+# Test with MCP Inspector
 npx @modelcontextprotocol/inspector node mcp/dist/index.js
 ```
 
